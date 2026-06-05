@@ -1,0 +1,3395 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>离线镜片识别平台 - YOLOv8</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #00a8ff;
+            --secondary: #00d4ff;
+            --accent: #0096ff;
+            --dark: #000000;
+            --darker: #1a1a1a;
+            --light: #ffffff;
+            --card-bg: rgba(30, 30, 30, 0.85);
+            --card-border: rgba(0, 168, 255, 0.35);
+            --glow: 0 0 20px rgba(0, 168, 255, 0.4);
+            --text-dark: #ffffff;
+            --text-secondary: #b0b0b0;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', 'Roboto', sans-serif;
+            background: #000000;
+            color: var(--text-dark);
+            line-height: 1.6;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(0, 168, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(0, 212, 255, 0.12) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(0, 150, 255, 0.05) 0%, transparent 60%);
+            z-index: -1;
+        }
+        
+        .header {
+            text-align: center;
+            padding: 10px 20px;
+            background: rgba(30, 30, 30, 0.9);
+            backdrop-filter: blur(10px);
+            border-bottom: 2px solid var(--card-border);
+            position: relative;
+            z-index: 10;
+            box-shadow: 0 2px 15px rgba(0, 168, 255, 0.2);
+        }
+        
+        .header h1 {
+            font-size: 2rem;
+            background: linear-gradient(to right, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 3px;
+            letter-spacing: 1px;
+        }
+        
+        .header p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        .main-content {
+            display: flex;
+            height: calc(100vh - 80px);
+        }
+        
+        .left-nav {
+            width: 200px;
+            background: linear-gradient(135deg, rgba(30, 30, 30, 0.95), rgba(0, 168, 255, 0.08));
+            border-right: 2px solid var(--card-border);
+            padding: 20px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary) rgba(0, 168, 255, 0.2);
+            box-shadow: 2px 0 15px rgba(0, 168, 255, 0.25);
+            backdrop-filter: blur(10px);
+        }
+        
+        .left-nav::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .left-nav::-webkit-scrollbar-track {
+            background: rgba(0, 168, 255, 0.08);
+        }
+        
+        .left-nav::-webkit-scrollbar-thumb {
+            background: linear-gradient(to bottom, var(--primary), var(--secondary));
+            border-radius: 3px;
+        }
+        
+        .left-nav::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(to bottom, #0090e6, #00b8e6);
+        }
+        
+        /* 导航栏分组标签样式 */
+        .nav-section-label {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-align: center;
+            padding: 0.4rem 0;
+            margin: 0.3rem 0;
+            background: rgba(0, 168, 255, 0.1);
+            border-radius: 6px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        
+        .nav-btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 16px;
+            background: linear-gradient(135deg, rgba(50, 50, 50, 0.9), rgba(0, 168, 255, 0.05));
+            border: 2px solid var(--card-border);
+            border-radius: 12px;
+            color: var(--text-dark);
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 500;
+            box-shadow: 0 2px 8px rgba(0, 168, 255, 0.2);
+            position: relative;
+        }
+        
+        .nav-btn:hover {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-color: var(--primary);
+            transform: translateX(8px);
+            box-shadow: 0 4px 15px rgba(0, 168, 255, 0.4);
+            color: white;
+        }
+        
+        .nav-btn:active {
+            transform: translateX(4px);
+            box-shadow: 0 2px 8px rgba(0, 168, 255, 0.3);
+        }
+        
+        .nav-btn i {
+            font-size: 1.4rem;
+            color: var(--primary);
+            min-width: 24px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-btn:hover i {
+            color: white;
+        }
+        
+        /* 上传相关按钮 - 蓝色主题 */
+        #single-image-btn {
+            background: linear-gradient(135deg, rgba(0, 168, 255, 0.15), rgba(0, 212, 255, 0.1));
+            border: 2px solid rgba(0, 168, 255, 0.35);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        #single-image-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transition: left 0.5s;
+        }
+        
+        #single-image-btn:hover::before {
+            left: 100%;
+        }
+        
+        #single-image-btn:hover {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border-color: var(--primary);
+            box-shadow: 0 6px 18px rgba(10, 132, 255, 0.4);
+        }
+        
+        #single-image-btn:hover i {
+            color: white;
+            animation: cameraFlash 0.6s ease;
+        }
+        
+        @keyframes cameraFlash {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; transform: scale(1.2); }
+        }
+        
+        #folder-btn {
+            background: linear-gradient(135deg, rgba(0, 150, 255, 0.15), rgba(0, 212, 255, 0.1));
+            border: 2px solid rgba(0, 150, 255, 0.35);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        #folder-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transition: left 0.5s;
+        }
+        
+        #folder-btn:hover::before {
+            left: 100%;
+        }
+        
+        #folder-btn:hover {
+            background: linear-gradient(135deg, var(--accent), var(--secondary));
+            color: white;
+            border-color: var(--accent);
+            box-shadow: 0 6px 18px rgba(0, 150, 255, 0.4);
+        }
+        
+        #folder-btn:hover i {
+            color: white;
+            animation: folderOpen 0.4s ease;
+        }
+        
+        @keyframes folderOpen {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.15) rotateY(180deg); }
+            100% { transform: scale(1); }
+        }
+        
+        #folder-btn i {
+            color: var(--accent);
+            transition: all 0.3s ease;
+        }
+        
+        /* 云端上传按钮 - 天蓝色云朵主题 */
+        #upload-result-btn {
+            background: linear-gradient(135deg, var(--secondary), var(--primary));
+            color: white;
+            border: 2px solid var(--secondary);
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0, 212, 255, 0.35);
+            position: relative;
+            overflow: visible;
+        }
+        
+        #upload-result-btn::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(135deg, var(--secondary), var(--primary));
+            border-radius: 12px;
+            opacity: 0;
+            z-index: -1;
+            transition: opacity 0.3s ease;
+            filter: blur(8px);
+        }
+        
+        #upload-result-btn:hover::before {
+            opacity: 0.6;
+        }
+        
+        #upload-result-btn::after {
+            content: '☁️';
+            position: absolute;
+            top: 50%;
+            right: -30px;
+            transform: translateY(-50%);
+            font-size: 2rem;
+            opacity: 0.2;
+            transition: all 0.5s ease;
+        }
+        
+        #upload-result-btn:hover::after {
+            right: 10px;
+            opacity: 0.4;
+        }
+        
+        #upload-result-btn i {
+            color: white;
+            transition: all 0.3s ease;
+        }
+        
+        #upload-result-btn:hover {
+            background: linear-gradient(135deg, var(--primary), #0090e6);
+            transform: translateX(6px);
+            box-shadow: 0 6px 16px rgba(0, 168, 255, 0.5);
+        }
+        
+        #upload-result-btn:hover i {
+            animation: cloudUpload 0.8s ease;
+        }
+        
+        @keyframes cloudUpload {
+            0%, 100% { transform: translateY(0); }
+            25% { transform: translateY(-4px); }
+            50% { transform: translateY(0); }
+            75% { transform: translateY(-2px); }
+        }
+        
+        /* 删除按钮 - 红色警告主题 */
+        #clear-result-btn {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+            color: white;
+            border: 2px solid #dc3545;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+            position: relative;
+            overflow: visible;
+        }
+        
+        #clear-result-btn::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(135deg, #dc3545, #c82333);
+            border-radius: 12px;
+            opacity: 0;
+            z-index: -1;
+            transition: opacity 0.3s ease;
+            filter: blur(8px);
+        }
+        
+        #clear-result-btn:hover::before {
+            opacity: 0.6;
+        }
+        
+        #clear-result-btn::after {
+            content: '⚠️';
+            position: absolute;
+            top: 50%;
+            right: -30px;
+            transform: translateY(-50%);
+            font-size: 1.8rem;
+            opacity: 0.2;
+            transition: all 0.5s ease;
+        }
+        
+        #clear-result-btn:hover::after {
+            right: 10px;
+            opacity: 0.4;
+            animation: warningPulse 0.6s ease;
+        }
+        
+        @keyframes warningPulse {
+            0%, 100% { transform: translateY(-50%) scale(1); }
+            50% { transform: translateY(-50%) scale(1.2); }
+        }
+        
+        #clear-result-btn i {
+            color: white;
+            transition: all 0.3s ease;
+        }
+        
+        #clear-result-btn:hover {
+            background: linear-gradient(135deg, #c82333, #a71d2a);
+            transform: translateX(6px);
+            box-shadow: 0 6px 16px rgba(220, 53, 69, 0.5);
+        }
+        
+        #clear-result-btn:hover i {
+            animation: trashShake 0.5s ease;
+        }
+        
+        @keyframes trashShake {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(-10deg); }
+            75% { transform: rotate(10deg); }
+        }
+        
+        /* 返回按钮 - 中性灰色 */
+        #back-btn {
+            background: linear-gradient(135deg, rgba(160, 160, 160, 0.15), rgba(128, 128, 128, 0.1));
+            border: 2px solid rgba(160, 160, 160, 0.3);
+            margin-top: auto;
+        }
+        
+        #back-btn:hover {
+            background: linear-gradient(135deg, #6c757d, #5a6268);
+            color: white;
+            border-color: #6c757d;
+            box-shadow: 0 6px 18px rgba(108, 117, 125, 0.3);
+        }
+        
+        #back-btn:hover i {
+            color: white;
+            animation: arrowBounce 0.6s ease;
+        }
+        
+        @keyframes arrowBounce {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(-5px); }
+        }
+        
+        #back-btn i {
+            color: #6c757d;
+            transition: all 0.3s ease;
+        }
+        
+        .right-content {
+            flex: 1;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .upload-section {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 10px;
+            margin-bottom: 10px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 25px rgba(0, 168, 255, 0.2);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .preview-container {
+            margin: 5px 0;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .preview-title {
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        
+        .preview-scroll {
+            display: flex;
+            overflow-x: auto;
+            overflow-y: hidden;
+            gap: 15px;
+            padding: 15px;
+            background: linear-gradient(135deg, rgba(50, 50, 50, 0.6), rgba(0, 168, 255, 0.08));
+            border-radius: 12px;
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary) rgba(0, 168, 255, 0.2);
+            justify-content: flex-start;
+            flex: 1;
+            min-height: 280px;
+            align-items: center;
+            border: 2px solid var(--card-border);
+            box-shadow: inset 0 2px 10px rgba(0, 168, 255, 0.2);
+        }
+        
+        .preview-scroll::-webkit-scrollbar {
+            height: 10px;
+        }
+        
+        .preview-scroll::-webkit-scrollbar-track {
+            background: rgba(0, 168, 255, 0.1);
+            border-radius: 5px;
+            margin: 0 10px;
+        }
+        
+        .preview-scroll::-webkit-scrollbar-thumb {
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            border-radius: 5px;
+            box-shadow: 0 2px 6px rgba(0, 168, 255, 0.3);
+        }
+        
+        .preview-scroll::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(to right, #0090e6, #00b8e6);
+            box-shadow: 0 2px 8px rgba(0, 168, 255, 0.5);
+        }
+        
+        .preview-item {
+            flex: 0 0 auto;
+            width: 320px;
+            height: 240px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            position: relative;
+            transition: all 0.3s ease;
+            border: 2px solid var(--card-border);
+            background: var(--card-bg);
+        }
+        
+        .preview-item:hover {
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 10px 30px rgba(0, 168, 255, 0.4);
+            border-color: var(--primary);
+        }
+        
+        .image-preview {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            background: rgba(0, 0, 0, 0.5);
+        }
+        
+        .image-preview:hover {
+            transform: scale(1.03);
+        }
+        
+        .empty-preview {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(50, 50, 50, 0.8) 0%, rgba(0, 168, 255, 0.1) 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            border: 2px dashed var(--card-border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            min-width: 320px;
+        }
+        
+        .empty-preview:hover {
+            border-color: var(--primary);
+            box-shadow: var(--glow);
+            background: linear-gradient(135deg, rgba(60, 60, 60, 0.9) 0%, rgba(0, 168, 255, 0.15) 100%);
+        }
+        
+        .empty-preview i {
+            font-size: 3.5rem;
+            margin-bottom: 15px;
+            color: var(--primary);
+            opacity: 0.5;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.05); }
+        }
+        
+        .upload-btn {
+            padding: 14px 30px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            border-radius: 10px;
+            margin-top: 15px;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(10, 132, 255, 0.3);
+        }
+        
+        .upload-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(10, 132, 255, 0.5);
+        }
+        
+        .cache-panel {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 10px;
+            margin-bottom: 10px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 25px rgba(0, 168, 255, 0.2);
+        }
+        
+        .cache-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .cache-stats {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        
+        .stat-item {
+            background: rgba(0, 168, 255, 0.1);
+            padding: 8px 12px;
+            border-radius: 6px;
+            text-align: center;
+            min-width: 70px;
+            border: 1px solid rgba(0, 168, 255, 0.2);
+        }
+        
+        .stat-number {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        
+        .cache-controls {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+        
+        .cache-controls button {
+            padding: 8px 16px;
+            border: 2px solid var(--card-border);
+            border-radius: 8px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(0, 168, 255, 0.08));
+            color: var(--text-dark);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 6px rgba(0, 168, 255, 0.15);
+        }
+        
+        .cache-controls button:hover:not(:disabled) {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-color: var(--primary);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 168, 255, 0.35);
+        }
+        
+        .cache-controls button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            background: rgba(0, 168, 255, 0.05);
+        }
+        
+        /* 缓存控制按钮特定样式 */
+        #select-all-btn:hover:not(:disabled) i {
+            animation: checkBounce 0.5s ease;
+        }
+        
+        @keyframes checkBounce {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+        }
+        
+        #batch-recognize-btn:hover:not(:disabled) {
+            background: linear-gradient(135deg, #9945d9, #7a2cbf);
+        }
+        
+        #batch-recognize-btn:hover:not(:disabled) i {
+            animation: brainThink 1s ease;
+        }
+        
+        @keyframes brainThink {
+            0%, 100% { transform: scale(1); }
+            25% { transform: scale(1.1) rotate(-5deg); }
+            75% { transform: scale(1.1) rotate(5deg); }
+        }
+        
+        #clear-cache-btn:hover:not(:disabled) {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            border-color: #f39c12;
+        }
+        
+        #clear-cache-btn:hover:not(:disabled) i {
+            animation: trashShake 0.5s ease;
+        }
+        
+        #refresh-cache-btn:hover:not(:disabled) i {
+            animation: spin 1s linear;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .cache-images {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 6px;
+            background: rgba(50, 50, 50, 0.5);
+            border-radius: 10px;
+            border: 1px solid rgba(0, 168, 255, 0.25);
+        }
+        
+        .cache-image-item {
+            position: relative;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .cache-image-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 168, 255, 0.35);
+        }
+        
+        .cache-image-item.selected {
+            border-color: var(--primary);
+            box-shadow: 0 0 15px rgba(0, 168, 255, 0.6);
+        }
+        
+        .cache-image-preview {
+            width: 100%;
+            height: 80px;
+            object-fit: cover;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .cache-image-preview:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0, 168, 255, 0.4);
+        }
+        
+        .cache-image-info {
+            padding: 6px;
+        }
+        
+        .cache-image-name {
+            font-size: 0.7rem;
+            color: var(--text-dark);
+            margin-bottom: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-weight: 500;
+        }
+        
+        .cache-image-status {
+            font-size: 0.6rem;
+            padding: 2px 4px;
+            border-radius: 3px;
+            display: inline-block;
+        }
+        
+        .status-cached {
+            background: rgba(52, 152, 219, 0.2);
+            color: #3498db;
+        }
+        
+        .status-processing {
+            background: rgba(241, 196, 15, 0.2);
+            color: #f1c40f;
+        }
+        
+        .status-completed {
+            background: rgba(46, 204, 113, 0.2);
+            color: #2ecc71;
+        }
+        
+        .status-error {
+            background: rgba(231, 76, 60, 0.2);
+            color: #e74c3c;
+        }
+        
+        .cache-image-actions {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            display: flex;
+            gap: 5px;
+        }
+        
+        .cache-image-actions button {
+            width: 24px;
+            height: 24px;
+            border: none;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .cache-image-actions button:hover {
+            background: var(--error-color);
+            transform: scale(1.1);
+        }
+        
+        .batch-progress {
+            background: rgba(0, 168, 255, 0.08);
+            border-radius: 6px;
+            padding: 8px;
+            margin-bottom: 8px;
+            display: none;
+            border: 1px solid rgba(0, 168, 255, 0.2);
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(0, 168, 255, 0.15);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(to right, var(--primary), var(--accent));
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .progress-text {
+            text-align: center;
+            color: var(--text-dark);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        
+        .hidden-file-input {
+            display: none;
+        }
+        
+        
+        .image-counter {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 14px;
+            backdrop-filter: blur(5px);
+        }
+        
+        .result-info {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+            color: white;
+            padding: 20px 10px 10px;
+            text-align: center;
+        }
+        
+        .result-class {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 2px;
+        }
+        
+        .result-confidence {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+        
+        .tech-element {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: -1;
+        }
+        
+        .circle {
+            position: absolute;
+            border-radius: 50%;
+            background: linear-gradient(var(--primary), var(--accent));
+            opacity: 0.1;
+            animation: float 15s infinite ease-in-out;
+        }
+        
+        .circle:nth-child(1) {
+            width: 300px;
+            height: 300px;
+            top: -150px;
+            left: -150px;
+            animation-delay: 0s;
+        }
+        
+        .circle:nth-child(2) {
+            width: 200px;
+            height: 200px;
+            bottom: -100px;
+            right: -100px;
+            animation-delay: -5s;
+        }
+        
+        @keyframes float {
+            0%, 100% {
+                transform: translate(0, 0) rotate(0deg);
+            }
+            25% {
+                transform: translate(20px, 20px) rotate(5deg);
+            }
+            50% {
+                transform: translate(0, 30px) rotate(0deg);
+            }
+            75% {
+                transform: translate(-20px, 20px) rotate(-5deg);
+            }
+        }
+        
+        .pulse {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--accent);
+            margin-right: 8px;
+            box-shadow: 0 0 0 rgba(191, 90, 242, 0.4);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(191, 90, 242, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 8px rgba(191, 90, 242, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(191, 90, 242, 0);
+            }
+        }
+        
+        /* 统计分析按钮 - 绿色主题 */
+        #avg-confidence-btn {
+            background: linear-gradient(135deg, rgba(46, 204, 113, 0.15), rgba(39, 174, 96, 0.1));
+            border: 2px solid rgba(46, 204, 113, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        #avg-confidence-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transition: left 0.5s;
+        }
+        
+        #avg-confidence-btn:hover::before {
+            left: 100%;
+        }
+        
+        #avg-confidence-btn:hover {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: white;
+            border-color: #2ecc71;
+            box-shadow: 0 6px 18px rgba(46, 204, 113, 0.4);
+        }
+        
+        #avg-confidence-btn:hover i {
+            color: white;
+            animation: chartBounce 0.6s ease;
+        }
+        
+        @keyframes chartBounce {
+            0%, 100% { transform: translateY(0); }
+            25% { transform: translateY(-3px); }
+            50% { transform: translateY(0); }
+            75% { transform: translateY(-2px); }
+        }
+        
+        #avg-confidence-btn i {
+            color: #2ecc71;
+            transition: all 0.3s ease;
+        }
+        
+        /* 统计图表模态框样式 */
+        .chart-modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 168, 255, 0.2);
+            backdrop-filter: blur(15px);
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .chart-modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 0;
+            width: 90%;
+            max-width: 1200px;
+            max-height: 90vh;
+            background: linear-gradient(135deg, rgba(40, 40, 40, 0.98), rgba(30, 30, 30, 0.98));
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 168, 255, 0.4);
+            animation: modalZoomIn 0.4s ease;
+            border: 2px solid var(--card-border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        @keyframes modalZoomIn {
+            from { 
+                transform: translate(-50%, -50%) scale(0.9); 
+                opacity: 0; 
+            }
+            to { 
+                transform: translate(-50%, -50%) scale(1); 
+                opacity: 1; 
+            }
+        }
+        
+        .chart-modal-header {
+            padding: 25px 30px;
+            background: linear-gradient(135deg, rgba(0, 168, 255, 0.15), rgba(0, 212, 255, 0.08));
+            border-bottom: 2px solid var(--card-border);
+            border-radius: 20px 20px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .chart-modal-header h2 {
+            margin: 0;
+            color: var(--text-dark);
+            font-size: 1.7rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 700;
+            text-shadow: 0 2px 4px rgba(0, 168, 255, 0.1);
+        }
+        
+        .chart-modal-header h2 i {
+            color: var(--primary);
+            font-size: 2rem;
+            filter: drop-shadow(0 2px 4px rgba(0, 168, 255, 0.3));
+        }
+        
+        .chart-modal-close {
+            color: var(--text-secondary);
+            font-size: 32px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: rgba(0, 168, 255, 0.1);
+            flex-shrink: 0;
+        }
+        
+        .chart-modal-close:hover {
+            color: var(--primary);
+            background: rgba(0, 168, 255, 0.25);
+            transform: rotate(90deg);
+            box-shadow: 0 0 12px rgba(0, 168, 255, 0.4);
+        }
+        
+        .chart-modal-close:active {
+            transform: rotate(90deg) scale(0.95);
+        }
+        
+        .chart-modal-body {
+            padding: 30px;
+            min-height: 400px;
+            overflow-y: auto;
+            flex: 1;
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary) rgba(0, 168, 255, 0.1);
+        }
+        
+        .chart-modal-body::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .chart-modal-body::-webkit-scrollbar-track {
+            background: rgba(0, 168, 255, 0.08);
+            border-radius: 4px;
+        }
+        
+        .chart-modal-body::-webkit-scrollbar-thumb {
+            background: linear-gradient(to bottom, var(--primary), var(--secondary));
+            border-radius: 4px;
+        }
+        
+        .chart-modal-body::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(to bottom, #0090e6, #00b8e6);
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 450px;
+            min-height: 350px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(240, 248, 255, 0.95));
+            border-radius: 12px;
+            padding: 25px;
+            border: 2px solid var(--card-border);
+            box-shadow: inset 0 2px 8px rgba(0, 168, 255, 0.08);
+        }
+        
+        .chart-empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-secondary);
+        }
+        
+        .chart-empty-state i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            color: var(--primary);
+            opacity: 0.4;
+        }
+        
+        .chart-stats-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 18px;
+            margin-top: 25px;
+            padding-top: 28px;
+            border-top: 3px solid rgba(0, 168, 255, 0.25);
+            position: relative;
+        }
+        
+        .chart-stats-summary::before {
+            content: '📊 统计概览';
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(240, 248, 255, 0.98));
+            padding: 6px 22px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--primary);
+            border-radius: 20px;
+            border: 2px solid rgba(0, 168, 255, 0.3);
+            box-shadow: 0 2px 8px rgba(0, 168, 255, 0.2);
+            white-space: nowrap;
+        }
+        
+        .chart-stat-card {
+            background: linear-gradient(135deg, rgba(0, 168, 255, 0.12), rgba(0, 212, 255, 0.08));
+            padding: 18px;
+            border-radius: 12px;
+            border: 2px solid var(--card-border);
+            text-align: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 3px 10px rgba(0, 168, 255, 0.15);
+        }
+        
+        .chart-stat-card:hover {
+            background: linear-gradient(135deg, rgba(0, 168, 255, 0.2), rgba(0, 212, 255, 0.15));
+            border-color: var(--primary);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 18px rgba(0, 168, 255, 0.3);
+        }
+        
+        .chart-stat-label {
+            font-size: 0.9rem;
+            color: var(--text-dark);
+            margin-bottom: 10px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+        }
+        
+        .chart-stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--primary);
+            text-shadow: 0 2px 4px rgba(0, 168, 255, 0.2);
+        }
+        
+        /* 上传进度模态框样式 */
+        .upload-progress-modal {
+            display: none;
+            position: fixed;
+            z-index: 3000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 168, 255, 0.2);
+            backdrop-filter: blur(15px);
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .upload-progress-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, rgba(40, 40, 40, 0.98), rgba(30, 30, 30, 0.98));
+            border-radius: 20px;
+            padding: 40px;
+            min-width: 450px;
+            max-width: 600px;
+            border: 2px solid var(--card-border);
+            box-shadow: 0 20px 60px rgba(0, 168, 255, 0.4);
+            animation: modalZoomIn 0.4s ease;
+        }
+        
+        @keyframes modalZoomIn {
+            from {
+                transform: translate(-50%, -50%) scale(0.8);
+                opacity: 0;
+            }
+            to {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+        }
+        
+        .upload-progress-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .upload-progress-header i {
+            font-size: 3rem;
+            color: var(--primary);
+            margin-bottom: 15px;
+            animation: uploadPulse 1.5s infinite;
+        }
+        
+        @keyframes uploadPulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.1);
+                opacity: 0.8;
+            }
+        }
+        
+        .upload-progress-header h3 {
+            font-size: 1.5rem;
+            color: var(--text-dark);
+            margin: 0;
+        }
+        
+        .upload-progress-info {
+            margin: 25px 0;
+            text-align: center;
+        }
+        
+        .upload-file-count {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+        
+        .upload-file-count span {
+            color: var(--primary);
+            font-weight: bold;
+            font-size: 1.3rem;
+        }
+        
+        .upload-status-text {
+            font-size: 0.95rem;
+            color: var(--primary);
+            margin-top: 15px;
+            min-height: 24px;
+            font-weight: 500;
+        }
+        
+        .upload-progress-bar-container {
+            margin: 20px 0;
+        }
+        
+        .upload-progress-bar {
+            width: 100%;
+            height: 12px;
+            background: rgba(0, 168, 255, 0.15);
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid var(--card-border);
+        }
+        
+        .upload-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            width: 0%;
+            transition: width 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .upload-progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            animation: progressShimmer 1.5s infinite;
+        }
+        
+        @keyframes progressShimmer {
+            0% {
+                transform: translateX(-100%);
+            }
+            100% {
+                transform: translateX(100%);
+            }
+        }
+        
+        .upload-progress-percent {
+            text-align: center;
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin-top: 10px;
+        }
+        
+        .upload-stop-btn {
+            width: 100%;
+            padding: 14px 30px;
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 25px;
+            box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+        }
+        
+        .upload-stop-btn:hover {
+            background: linear-gradient(135deg, #c0392b, #a93226);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(231, 76, 60, 0.5);
+        }
+        
+        .upload-stop-btn:active {
+            transform: translateY(0);
+        }
+        
+        .upload-stop-btn i {
+            margin-right: 8px;
+        }
+        
+        .result-example {
+            color: #a0a0a0;
+            margin-top: 10px;
+        }
+        
+        .result-example div {
+            margin-bottom: 8px;
+            padding-left: 15px;
+            border-left: 2px solid var(--primary);
+        }
+        
+        /* 图片放大模态框样式 */
+        .image-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 168, 255, 0.25);
+            backdrop-filter: blur(15px);
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .modal-content {
+            position: relative;
+            margin: auto;
+            padding: 0;
+            width: 90%;
+            height: 90%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: zoomIn 0.3s ease;
+        }
+        
+        .modal-image {
+            max-width: 95%;
+            max-height: 90vh;
+            object-fit: contain;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            cursor: zoom-in;
+            transition: transform 0.3s ease;
+            border: 2px solid var(--card-border);
+        }
+        
+        .modal-image.zoomed {
+            transform: scale(1.8);
+            cursor: zoom-out;
+            max-width: none;
+            max-height: none;
+        }
+        
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 1001;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+        
+        .modal-info {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+        
+        .modal-controls {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: none;
+            padding: 15px;
+            cursor: pointer;
+            font-size: 20px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            z-index: 1001;
+        }
+        
+        .modal-controls:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-50%) scale(1.1);
+        }
+        
+        .modal-prev {
+            left: 20px;
+        }
+        
+        .modal-next {
+            right: 20px;
+        }
+        
+        .modal-counter {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            backdrop-filter: blur(10px);
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes zoomIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        
+        @keyframes slideIn {
+            from { 
+                transform: translateX(100%); 
+                opacity: 0; 
+            }
+            to { 
+                transform: translateX(0); 
+                opacity: 1; 
+            }
+        }
+        
+        /* 预览图片点击效果 */
+        .preview-item {
+            cursor: pointer;
+        }
+        
+        .preview-item:hover .image-preview {
+            transform: scale(1.05);
+        }
+        
+        @media (min-width: 1600px) {
+            .chart-modal-content {
+                width: 80%;
+                max-width: 1400px;
+            }
+            
+            .chart-container {
+                height: 550px;
+            }
+            
+            .chart-stats-summary {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+        
+        @media (max-width: 1200px) {
+            .left-nav {
+                width: 200px;
+            }
+        }
+        
+        @media (max-width: 900px) {
+            .main-content {
+                flex-direction: column;
+                height: auto;
+            }
+            
+            .left-nav {
+                width: 100%;
+                padding: 15px;
+                flex-direction: row;
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+            
+            .nav-btn {
+                flex: 1;
+                justify-content: center;
+                text-align: center;
+                min-width: 120px;
+            }
+            
+            .preview-item {
+                width: 300px;
+                height: 220px;
+            }
+            
+            .preview-scroll {
+                min-height: 240px;
+            }
+            
+            /* 图表弹窗响应式 */
+            .chart-modal-content {
+                width: 95%;
+                max-height: 95vh;
+            }
+            
+            .chart-modal-header {
+                padding: 20px;
+            }
+            
+            .chart-modal-header h2 {
+                font-size: 1.3rem;
+            }
+            
+            .chart-modal-body {
+                padding: 20px;
+            }
+            
+            .chart-container {
+                height: 350px;
+            }
+            
+            .chart-stats-summary {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 600px) {
+            .chart-modal-content {
+                width: 98%;
+                max-height: 98vh;
+            }
+            
+            .chart-modal-header {
+                padding: 15px;
+            }
+            
+            .chart-modal-header h2 {
+                font-size: 1.1rem;
+                gap: 8px;
+            }
+            
+            .chart-modal-header h2 i {
+                font-size: 1.5rem;
+            }
+            
+            .chart-modal-close {
+                width: 36px;
+                height: 36px;
+                font-size: 24px;
+            }
+            
+            .chart-modal-body {
+                padding: 15px;
+            }
+            
+            .chart-container {
+                height: 280px;
+                padding: 15px;
+            }
+            
+            .chart-stats-summary {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+            
+            .chart-stats-summary::before {
+                font-size: 0.85rem;
+                padding: 5px 16px;
+            }
+            
+            .chart-stat-card {
+                padding: 15px;
+            }
+            
+            .chart-stat-value {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="tech-element">
+        <div class="circle"></div>
+        <div class="circle"></div>
+    </div>
+    
+    <div class="header">
+        <h1>视觉识别平台</h1>
+        <p>离线镜片瑕疵图像识别系统</p>
+    </div>
+    
+    <div class="main-content">
+        <div class="left-nav">
+            <!-- 上传图片组 -->
+            <div class="nav-section-label">📤 图片上传</div>
+            <button class="nav-btn" id="single-image-btn">
+                <i class="fas fa-camera"></i>
+                <span>单张照片</span>
+            </button>
+            <button class="nav-btn" id="folder-btn">
+                <i class="fas fa-folder"></i>
+                <span>文件夹</span>
+            </button>
+            
+            <!-- 分隔线 -->
+            <div style="height: 2px; background: linear-gradient(to right, transparent, var(--card-border), transparent); margin: 0.8rem 0; border-radius: 1px; opacity: 0.6;"></div>
+            
+            <!-- 批量操作组 -->
+            <div class="nav-section-label">☁️ 批量操作</div>
+            <button class="nav-btn" id="upload-result-btn">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <span>批量上传结果</span>
+            </button>
+            <button class="nav-btn" id="clear-result-btn">
+                <i class="fas fa-trash"></i>
+                <span>清空结果</span>
+            </button>
+            
+            <!-- 分隔线 -->
+            <div style="height: 2px; background: linear-gradient(to right, transparent, var(--card-border), transparent); margin: 0.8rem 0; border-radius: 1px; opacity: 0.6;"></div>
+            
+            <!-- 统计分析组 -->
+            <div class="nav-section-label">📊 统计分析</div>
+            <button class="nav-btn" id="avg-confidence-btn">
+                <i class="fas fa-chart-bar"></i>
+                <span>平均置信度</span>
+            </button>
+            
+            <!-- 分隔线 -->
+            <div style="height: 2px; background: linear-gradient(to right, transparent, var(--card-border), transparent); margin: 0.8rem 0; border-radius: 1px; opacity: 0.6;"></div>
+            
+            <!-- 导航组 -->
+            <button class="nav-btn" id="back-btn">
+                <i class="fas fa-arrow-left"></i>
+                <span>返回</span>
+            </button>
+            <input type="file" id="single-image-input" class="hidden-file-input" accept="image/*">
+            <input type="file" id="folder-input" class="hidden-file-input" webkitdirectory directory multiple>
+        </div>
+
+        <div class="right-content">
+            <!-- 本地缓存面板 -->
+            <div class="cache-panel">
+                <div class="cache-header">
+                    <h3 style="margin: 0; color: var(--primary);">
+                        <i class="fas fa-database"></i>
+                        本地缓存管理
+                    </h3>
+                    <div class="cache-stats" id="cache-stats">
+                        <div class="stat-item">
+                            <div class="stat-number" id="total-count">0</div>
+                            <div class="stat-label">总图片</div>
+                    </div>
+                        <div class="stat-item">
+                            <div class="stat-number" id="cached-count">0</div>
+                            <div class="stat-label">已缓存</div>
+                            </div>
+                        <div class="stat-item">
+                            <div class="stat-number" id="completed-count">0</div>
+                            <div class="stat-label">已完成</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number" id="cache-size">0MB</div>
+                            <div class="stat-label">缓存大小</div>
+                    </div>
+                </div>
+                </div>
+                
+                <div class="cache-controls">
+                    <button id="select-all-btn">
+                        <i class="fas fa-check-square"></i>
+                        全选
+                </button>
+                    <button id="batch-recognize-btn" disabled>
+                        <i class="fas fa-brain"></i>
+                        批量识别
+                </button>
+
+                    <button id="clear-cache-btn">
+                        <i class="fas fa-trash"></i>
+                        清空原始图片
+                    </button>
+                    <button id="refresh-cache-btn">
+                        <i class="fas fa-sync"></i>
+                        刷新
+                    </button>
+            </div>
+            
+                <div class="batch-progress" id="batch-progress">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                    <div class="progress-text" id="progress-text">准备中...</div>
+                </div>
+                
+                <div class="cache-images" id="cache-images">
+                    <div style="grid-column: 1 / -1; text-align: center; color: var(--text-secondary); padding: 40px;">
+                        <i class="fas fa-images" style="font-size: 3rem; margin-bottom: 15px; opacity: 0.5;"></i>
+                        <p>暂无缓存图片，请先上传图片</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="upload-section">
+                <div class="preview-container">
+                    <div class="preview-title">
+                        <i class="fas fa-check-circle"></i>
+                        <span>识别结果图片展示</span>
+                    </div>
+                    <div class="preview-scroll" id="result-preview">
+                        <div class="preview-item">
+                            <div class="empty-preview">
+                                <i class="fas fa-search"></i>
+                                <span>识别结果将在此显示</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- 图片放大模态框 -->
+    <div id="imageModal" class="image-modal">
+        <div class="modal-content">
+            <span class="modal-close" id="modalClose">&times;</span>
+            <div class="modal-counter" id="modalCounter">1 / 1</div>
+            <button class="modal-controls modal-prev" id="modalPrev" style="display: none;">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <button class="modal-controls modal-next" id="modalNext" style="display: none;">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+            <img id="modalImage" class="modal-image" src="" alt="">
+            <div class="modal-info" id="modalInfo">
+                <div id="modalFilename">图片名称</div>
+                <div id="modalDetails">点击图片可放大查看</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 平均置信度统计图表模态框 -->
+    <div id="chartModal" class="chart-modal">
+        <div class="chart-modal-content">
+            <div class="chart-modal-header">
+                <h2>
+                    <i class="fas fa-chart-bar"></i>
+                    <span>各类别平均置信度统计</span>
+                </h2>
+                <span class="chart-modal-close" id="chartModalClose">&times;</span>
+            </div>
+            <div class="chart-modal-body">
+                <div class="chart-container">
+                    <canvas id="confidenceChart"></canvas>
+                    <div class="chart-empty-state" id="chartEmptyState">
+                        <i class="fas fa-chart-bar"></i>
+                        <p style="font-size: 1.2rem;">暂无统计数据</p>
+                        <p style="font-size: 0.9rem; color: #666;">请先进行图片识别</p>
+                    </div>
+                </div>
+                <div class="chart-stats-summary" id="chartStatsSummary" style="display: none;">
+                    <!-- 统计卡片将通过JavaScript动态生成 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 上传进度模态框 -->
+    <div id="uploadProgressModal" class="upload-progress-modal">
+        <div class="upload-progress-content">
+            <div class="upload-progress-header">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <h3>文件上传中...</h3>
+            </div>
+            
+            <div class="upload-progress-info">
+                <div class="upload-file-count">
+                    正在上传: <span id="uploadCurrentFile">0</span> / <span id="uploadTotalFiles">0</span> 个文件
+                </div>
+                
+                <div class="upload-progress-bar-container">
+                    <div class="upload-progress-bar">
+                        <div class="upload-progress-fill" id="uploadProgressFill"></div>
+                    </div>
+                    <div class="upload-progress-percent" id="uploadProgressPercent">0%</div>
+                </div>
+                
+                <div class="upload-status-text" id="uploadStatusText">准备上传...</div>
+            </div>
+            
+            <button class="upload-stop-btn" id="uploadStopBtn">
+                <i class="fas fa-stop-circle"></i>
+                停止
+            </button>
+        </div>
+    </div>
+
+    <!-- Chart.js库 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <script>
+        let currentFiles = [];
+        let currentImageIndex = 0;
+        let imageModal = document.getElementById('imageModal');
+        let modalImage = document.getElementById('modalImage');
+        let modalCounter = document.getElementById('modalCounter');
+        let modalFilename = document.getElementById('modalFilename');
+        let modalDetails = document.getElementById('modalDetails');
+        let modalPrev = document.getElementById('modalPrev');
+        let modalNext = document.getElementById('modalNext');
+        let modalClose = document.getElementById('modalClose');
+        
+        // 缓存管理相关变量
+        let cachedImages = [];
+        let selectedImages = new Set();
+        let currentBatchId = null;
+        
+        // 统计图表相关变量
+        let confidenceChart = null;
+        let chartModal = document.getElementById('chartModal');
+        let chartModalClose = document.getElementById('chartModalClose');
+        
+        // 上传进度相关变量
+        let uploadAbortController = null;
+        let uploadProgressModal = document.getElementById('uploadProgressModal');
+        let isUploading = false;
+        // 处理单张照片按钮
+        document.getElementById('single-image-btn').addEventListener('click', () => {
+            document.getElementById('single-image-input').click();
+        });
+
+        document.getElementById('single-image-input').addEventListener('change', handleSingleImageSelect);
+
+        // 处理单张图片选择
+        async function handleSingleImageSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            if (!file.type.startsWith('image/')) {
+                showMessage('请选择图片文件', 'error');
+                return;
+            }
+            
+            if (isUploading) {
+                showMessage('正在上传中，请稍候...', 'info');
+                return;
+            }
+            
+            // 显示上传进度弹窗
+            showUploadProgress(1);
+            
+            try {
+                updateUploadProgress(0, 1, `正在上传: ${file.name}`);
+                
+                // 先将图片添加到缓存
+                const formData = new FormData();
+                formData.append('files', file);
+                
+                uploadAbortController = new AbortController();
+                
+                const addResponse = await fetch('/api/batch/add_images', {
+                    method: 'POST',
+                    body: formData,
+                    signal: uploadAbortController.signal
+                });
+                
+                const addData = await addResponse.json();
+                
+                if (addData.success) {
+                    updateUploadProgress(1, 1, `上传成功: ${file.name}`);
+                    
+                    // 延迟一下再隐藏弹窗，让用户看到完成状态
+                    setTimeout(() => {
+                        hideUploadProgress();
+                        showMessage('图片已添加到缓存！', 'success');
+                    }, 500);
+                    
+                    // 刷新缓存显示
+                    loadCacheImages();
+                    
+                    // 自动进行识别
+                    const imageId = addData.data[0].id;
+                    await recognizeSingleImage(imageId);
+                } else {
+                    hideUploadProgress();
+                    showMessage(`添加图片到缓存失败: ${addData.error}`, 'error');
+                }
+            } catch (error) {
+                hideUploadProgress();
+                if (error.name === 'AbortError') {
+                    showMessage('上传已取消', 'info');
+                } else {
+                    showMessage(`处理失败: ${error.message}`, 'error');
+                }
+            }
+        }
+        
+        // 识别单张图片
+        async function recognizeSingleImage(imageId) {
+            try {
+                showMessage('正在识别图片...', 'info');
+                
+                const response = await fetch('/api/batch/recognize', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        image_ids: [imageId]
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage('图片识别完成！', 'success');
+                    // 刷新缓存和结果显示
+                    loadCacheImages();
+                    loadResultImages();
+                } else {
+                    showMessage(`识别失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showMessage(`识别失败: ${error.message}`, 'error');
+            }
+        }
+        
+
+        // 处理文件夹按钮
+        document.getElementById('folder-btn').addEventListener('click', () => {
+            document.getElementById('folder-input').click();
+        });
+
+        document.getElementById('folder-input').addEventListener('change', (event) => {
+            const files = Array.from(event.target.files).filter(file => file.type.startsWith('image/'));
+            if (files.length > 0) {
+                // 自动添加到缓存
+                addFilesToCache(files);
+            }
+        });
+
+
+        // 返回按钮
+        document.getElementById('back-btn').addEventListener('click', () => {
+            window.location.href = '/select_fan';
+        });
+
+
+        
+        // 清空上传面板函数
+        function clearUploadPanel() {
+            currentFiles = [];
+
+            // 重置预览区域
+            const preview = document.getElementById('result-preview');
+            preview.innerHTML = `
+                <div class="preview-item">
+                    <div class="empty-preview">
+                        <i class="fas fa-search"></i>
+                        <span>识别结果将在此显示</span>
+                    </div>
+                </div>
+            `;
+
+            // 禁用检测按钮（如果存在）
+            const detectBtn = document.getElementById('detect-btn');
+            if (detectBtn) {
+                detectBtn.disabled = true;
+            }
+
+            // 清空文件输入
+            const singleImageInput = document.getElementById('single-image-input');
+            const folderInput = document.getElementById('folder-input');
+            
+            if (singleImageInput) {
+                singleImageInput.value = '';
+            }
+            if (folderInput) {
+                folderInput.value = '';
+            }
+            
+            // 移除图片计数器
+            const counter = document.querySelector('.image-counter');
+            if (counter) {
+                counter.remove();
+            }
+        }
+
+        
+        // 显示上传进度弹窗
+        function showUploadProgress(totalFiles) {
+            uploadProgressModal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+            document.getElementById('uploadTotalFiles').textContent = totalFiles;
+            document.getElementById('uploadCurrentFile').textContent = '0';
+            document.getElementById('uploadProgressFill').style.width = '0%';
+            document.getElementById('uploadProgressPercent').textContent = '0%';
+            document.getElementById('uploadStatusText').textContent = '准备上传...';
+            isUploading = true;
+            
+            // 创建新的 AbortController
+            uploadAbortController = new AbortController();
+        }
+        
+        // 隐藏上传进度弹窗
+        function hideUploadProgress() {
+            uploadProgressModal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+            isUploading = false;
+            uploadAbortController = null;
+        }
+        
+        // 更新上传进度
+        function updateUploadProgress(current, total, statusText = '') {
+            const percent = Math.round((current / total) * 100);
+            document.getElementById('uploadCurrentFile').textContent = current;
+            document.getElementById('uploadProgressFill').style.width = percent + '%';
+            document.getElementById('uploadProgressPercent').textContent = percent + '%';
+            if (statusText) {
+                document.getElementById('uploadStatusText').textContent = statusText;
+            }
+        }
+        
+        // 停止上传
+        function stopUpload() {
+            if (uploadAbortController) {
+                uploadAbortController.abort();
+                showMessage('上传已取消', 'info');
+                hideUploadProgress();
+            }
+        }
+        
+        // 添加文件到缓存（带进度显示）
+        async function addFilesToCache(files) {
+            if (isUploading) {
+                showMessage('正在上传中，请稍候...', 'info');
+                return;
+            }
+            
+            const fileArray = Array.from(files);
+            const totalFiles = fileArray.length;
+            
+            // 显示上传进度弹窗
+            showUploadProgress(totalFiles);
+            
+            try {
+                let uploadedCount = 0;
+                
+                // 逐个上传文件（或分批上传）
+                for (let i = 0; i < fileArray.length; i++) {
+                    // 检查是否已取消
+                    if (uploadAbortController.signal.aborted) {
+                        throw new Error('上传已取消');
+                    }
+                    
+                    const file = fileArray[i];
+                    updateUploadProgress(i, totalFiles, `正在上传: ${file.name}`);
+                    
+                    const formData = new FormData();
+                    formData.append('files', file);
+                    
+                    const response = await fetch('/api/batch/add_images', {
+                        method: 'POST',
+                        body: formData,
+                        signal: uploadAbortController.signal
+                    });
+                    
+                    const data = await response.json();
+                    if (data.success) {
+                        uploadedCount += data.data.length;
+                        updateUploadProgress(i + 1, totalFiles, `已上传: ${file.name}`);
+                    } else {
+                        console.error(`上传失败: ${file.name}`, data.error);
+                    }
+                }
+                
+                // 上传完成
+                hideUploadProgress();
+                showMessage(`成功添加 ${uploadedCount} 张图片到本地缓存！`, 'success');
+                loadCacheImages();
+                
+            } catch (error) {
+                hideUploadProgress();
+                if (error.name === 'AbortError' || error.message === '上传已取消') {
+                    showMessage('上传已取消', 'info');
+                } else {
+                    showMessage(`添加图片到缓存失败: ${error.message}`, 'error');
+                }
+            }
+        }
+        
+        // 加载缓存图片
+        async function loadCacheImages() {
+            try {
+                const response = await fetch('/api/batch/cache_status');
+                const data = await response.json();
+                
+                if (data.success) {
+                    cachedImages = data.data.images;
+                    updateCacheStats(data.data.stats);
+                    renderCacheImages();
+                    loadResultImages(); // 同时加载结果图片
+                }
+            } catch (error) {
+                console.error('加载缓存图片失败:', error);
+            }
+        }
+        
+        // 加载结果图片
+        async function loadResultImages() {
+            try {
+                const response = await fetch('/api/batch/results_status');
+                const data = await response.json();
+                
+                const resultPreview = document.getElementById('result-preview');
+                
+                if (data.success && data.data.results.length > 0) {
+                    resultPreview.innerHTML = '';
+                    data.data.results.forEach((result, index) => {
+                        const previewItem = createResultPreviewItemFromResult(result, index + 1);
+                        resultPreview.appendChild(previewItem);
+                    });
+                } else {
+                    resultPreview.innerHTML = `
+                    <div class="preview-item">
+                            <div class="empty-preview">
+                                <i class="fas fa-search"></i>
+                                <span>识别结果将在此显示</span>
+                            </div>
+                    </div>
+                `;
+                }
+            } catch (error) {
+                console.error('加载结果图片失败:', error);
+                const resultPreview = document.getElementById('result-preview');
+                resultPreview.innerHTML = `
+                    <div class="preview-item">
+                        <div class="empty-preview">
+                            <i class="fas fa-search"></i>
+                            <span>识别结果将在此显示</span>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        // 创建结果预览项（从images缓存）
+        function createResultPreviewItem(img, index) {
+            const previewItem = document.createElement('div');
+            previewItem.className = 'preview-item';
+            
+            const imgElement = document.createElement('img');
+            imgElement.src = `/static/data/local_cache/results/${img.annotated_image.split('/').pop()}`;
+            imgElement.className = 'image-preview';
+            imgElement.alt = img.filename;
+            
+            // 添加图片加载错误处理
+            imgElement.onerror = function() {
+                console.error('结果图片加载失败:', imgElement.src);
+                imgElement.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjI0MCIgdmlld0JveD0iMCAwIDMwMCAyNDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMjQwIiBmaWxsPSIjMzMzIi8+Cjx0ZXh0IHg9IjE1MCIgeT0iMTIwIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTYiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiPuWbvueJh+WKoOi9veWksei0pTwvdGV4dD4KPC9zdmc+Cg==';
+            };
+            
+            const indexBadge = document.createElement('div');
+            indexBadge.className = 'image-counter';
+            indexBadge.textContent = `#${index}`;
+            indexBadge.style.cssText = `
+                position: absolute;
+                top: 10px;
+                left: 10px;
+                background: linear-gradient(135deg, var(--primary), var(--secondary));
+                color: white;
+                padding: 5px 12px;
+                border-radius: 15px;
+                font-size: 13px;
+                font-weight: bold;
+                backdrop-filter: blur(5px);
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            `;
+            
+            // 添加结果信息
+            const resultInfo = document.createElement('div');
+            resultInfo.className = 'result-info';
+            resultInfo.style.cssText = `
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: linear-gradient(transparent, rgba(0, 0, 0, 0.9));
+                color: white;
+                padding: 12px;
+                text-align: left;
+                backdrop-filter: blur(5px);
+            `;
+            resultInfo.innerHTML = `
+                <div class="result-class" style="font-size: 15px; font-weight: bold; margin-bottom: 4px; color: var(--primary); text-shadow: 0 0 8px rgba(10, 132, 255, 0.5);">${img.result || '未知'}</div>
+                <div class="result-confidence" style="font-size: 13px; color: var(--success-color);">置信度: ${((img.confidence || 0) * 100).toFixed(1)}%</div>
+            `;
+            
+            // 添加点击提示
+            const clickHint = document.createElement('div');
+            clickHint.style.cssText = `
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                background: rgba(0, 0, 0, 0.7);
+                color: white;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 11px;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+                pointer-events: none;
+            `;
+            clickHint.textContent = '🔍 点击查看';
+            
+            previewItem.addEventListener('mouseenter', () => {
+                clickHint.style.opacity = '1';
+            });
+            
+            previewItem.addEventListener('mouseleave', () => {
+                clickHint.style.opacity = '0';
+            });
+            
+            // 添加点击事件
+            previewItem.addEventListener('click', () => {
+                openResultImageModal(imgElement.src, img.filename, index - 1);
+            });
+            
+            previewItem.appendChild(imgElement);
+            previewItem.appendChild(indexBadge);
+            previewItem.appendChild(resultInfo);
+            previewItem.appendChild(clickHint);
+            
+            return previewItem;
+        }
+        
+        // 创建结果预览项（从results缓存）
+        function createResultPreviewItemFromResult(result, index) {
+            const previewItem = document.createElement('div');
+            previewItem.className = 'preview-item';
+            
+            const imgElement = document.createElement('img');
+            imgElement.src = `/static/data/local_cache/results/${result.result_filename}`;
+            imgElement.className = 'image-preview';
+            imgElement.alt = `Result ${result.id}`;
+            
+            // 添加图片加载错误处理
+            imgElement.onerror = function() {
+                console.error('结果图片加载失败:', imgElement.src);
+                imgElement.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjI0MCIgdmlld0JveD0iMCAwIDMwMCAyNDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMjQwIiBmaWxsPSIjMzMzIi8+Cjx0ZXh0IHg9IjE1MCIgeT0iMTIwIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTYiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiPuWbvueJh+WKoOi9veWksei0pTwvdGV4dD4KPC9zdmc+Cg==';
+            };
+            
+            const indexBadge = document.createElement('div');
+            indexBadge.className = 'image-counter';
+            indexBadge.textContent = `#${index}`;
+            indexBadge.style.cssText = `
+                position: absolute;
+                top: 10px;
+                left: 10px;
+                background: linear-gradient(135deg, var(--primary), var(--secondary));
+                color: white;
+                padding: 5px 12px;
+                border-radius: 15px;
+                font-size: 13px;
+                font-weight: bold;
+                backdrop-filter: blur(5px);
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            `;
+            
+            // 添加结果信息
+            const resultInfo = document.createElement('div');
+            resultInfo.className = 'result-info';
+            resultInfo.style.cssText = `
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: linear-gradient(transparent, rgba(0, 0, 0, 0.9));
+                color: white;
+                padding: 12px;
+                text-align: left;
+                backdrop-filter: blur(5px);
+            `;
+            resultInfo.innerHTML = `
+                <div class="result-class" style="font-size: 15px; font-weight: bold; margin-bottom: 4px; color: var(--primary); text-shadow: 0 0 8px rgba(10, 132, 255, 0.5);">${result.result_class || '未知'}</div>
+                <div class="result-confidence" style="font-size: 13px; color: var(--success-color);">置信度: ${((result.confidence || 0) * 100).toFixed(1)}%</div>
+            `;
+            
+            // 添加点击提示
+            const clickHint = document.createElement('div');
+            clickHint.style.cssText = `
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                background: rgba(0, 0, 0, 0.7);
+                color: white;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 11px;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+                pointer-events: none;
+            `;
+            clickHint.textContent = '🔍 点击查看';
+            
+            previewItem.addEventListener('mouseenter', () => {
+                clickHint.style.opacity = '1';
+            });
+            
+            previewItem.addEventListener('mouseleave', () => {
+                clickHint.style.opacity = '0';
+            });
+            
+            // 添加点击事件
+            previewItem.addEventListener('click', () => {
+                openResultImageModal(imgElement.src, `Result ${result.id}`, index - 1);
+            });
+            
+            previewItem.appendChild(imgElement);
+            previewItem.appendChild(indexBadge);
+            previewItem.appendChild(resultInfo);
+            previewItem.appendChild(clickHint);
+            
+            return previewItem;
+        }
+
+        // 更新缓存统计
+        function updateCacheStats(stats) {
+            document.getElementById('total-count').textContent = stats.total_images;
+            document.getElementById('cached-count').textContent = stats.by_status.cached || 0;
+            document.getElementById('completed-count').textContent = stats.by_status.completed || 0;
+            document.getElementById('cache-size').textContent = stats.cache_size_mb + 'MB';
+        }
+        
+        // 渲染缓存图片
+        function renderCacheImages() {
+            const container = document.getElementById('cache-images');
+            
+            if (cachedImages.length === 0) {
+                container.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; color: var(--text-secondary); padding: 40px;">
+                        <i class="fas fa-images" style="font-size: 3rem; margin-bottom: 15px; opacity: 0.5;"></i>
+                        <p>暂无缓存图片，请先上传图片</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            cachedImages.forEach(img => {
+                const item = document.createElement('div');
+                item.className = 'cache-image-item';
+                item.dataset.imageId = img.id;
+                
+                if (selectedImages.has(img.id)) {
+                    item.classList.add('selected');
+                }
+                
+                const statusClass = `status-${img.status}`;
+                const statusText = {
+                    'cached': '已缓存',
+                    'processing': '处理中',
+                    'completed': '已完成',
+                    'error': '错误'
+                }[img.status] || '未知';
+                
+                item.innerHTML = `
+                    <img src="/static/data/local_cache/images/${img.cached_filename}" 
+                         class="cache-image-preview" 
+                         alt="${img.filename}"
+                         onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDIwMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMTIwIiBmaWxsPSIjMzMzIi8+Cjx0ZXh0IHg9IjEwMCIgeT0iNjAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+5Zu+54mH5Yqg6L295aSx6LSlPC90ZXh0Pgo8L3N2Zz4K'">
+                    <div class="cache-image-info">
+                        <div class="cache-image-name" title="${img.filename}">${img.filename}</div>
+                        <div class="cache-image-status ${statusClass}">${statusText}</div>
+                        ${img.result ? `<div style="font-size: 0.7rem; color: var(--primary); margin-top: 2px;">${img.result} (${(img.confidence * 100).toFixed(1)}%)</div>` : ''}
+                    </div>
+                    <div class="cache-image-actions">
+                        <button onclick="removeCachedImage('${img.id}')" title="删除">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                `;
+                
+                // 添加点击事件 - 点击图片放大，点击其他区域选择
+                item.addEventListener('click', (e) => {
+                    if (e.target.closest('.cache-image-actions')) return;
+                    
+                    // 如果点击的是图片，则放大显示
+                    if (e.target.classList.contains('cache-image-preview')) {
+                        const imageIndex = cachedImages.findIndex(cachedImg => cachedImg.id === img.id);
+                        openImageModal(e.target.src, img.filename, imageIndex);
+                    } else {
+                        // 否则切换选择状态
+                        toggleImageSelection(img.id);
+                    }
+                });
+                
+                container.appendChild(item);
+            });
+            
+            updateBatchButtons();
+        }
+        
+        // 切换图片选择状态
+        function toggleImageSelection(imageId) {
+            if (selectedImages.has(imageId)) {
+                selectedImages.delete(imageId);
+            } else {
+                selectedImages.add(imageId);
+            }
+            
+            const item = document.querySelector(`[data-image-id="${imageId}"]`);
+            if (item) {
+                item.classList.toggle('selected', selectedImages.has(imageId));
+            }
+            
+            updateBatchButtons();
+        }
+        
+        // 更新批量操作按钮状态
+        function updateBatchButtons() {
+            const hasSelected = selectedImages.size > 0;
+            const hasCached = cachedImages.some(img => img.status === 'cached');
+            const hasCompleted = cachedImages.some(img => img.status === 'completed');
+            
+            const batchRecognizeBtn = document.getElementById('batch-recognize-btn');
+            const uploadResultBtn = document.getElementById('upload-result-btn');
+            
+            if (batchRecognizeBtn) {
+                batchRecognizeBtn.disabled = !hasCached;
+            }
+            if (uploadResultBtn) {
+                uploadResultBtn.disabled = !hasCompleted;
+            }
+        }
+        
+        // 全选/取消全选
+        function toggleSelectAll() {
+            const allCached = cachedImages.filter(img => img.status === 'cached');
+            const allSelected = allCached.every(img => selectedImages.has(img.id));
+            
+            if (allSelected) {
+                // 取消全选
+                allCached.forEach(img => selectedImages.delete(img.id));
+            } else {
+                // 全选
+                allCached.forEach(img => selectedImages.add(img.id));
+            }
+            
+            renderCacheImages();
+        }
+        
+        // 批量识别
+        async function batchRecognize() {
+            const selectedIds = Array.from(selectedImages);
+            if (selectedIds.length === 0) {
+                showMessage('请先选择要识别的图片', 'error');
+                return;
+            }
+            
+            if (isUploading) {
+                showMessage('正在上传中，请稍候...', 'info');
+                return;
+            }
+            
+            const btn = document.getElementById('batch-recognize-btn');
+            if (!btn) {
+                showMessage('找不到批量识别按钮', 'error');
+                return;
+            }
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 识别中...';
+            
+            // 使用上传进度弹窗显示识别进度
+            showUploadProgress(selectedIds.length);
+            document.querySelector('.upload-progress-header h3').textContent = '正在识别图片...';
+            document.querySelector('.upload-progress-header i').className = 'fas fa-brain';
+            
+            try {
+                updateUploadProgress(0, selectedIds.length, '开始批量识别...');
+                
+                const response = await fetch('/api/batch/recognize', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        image_ids: selectedIds
+                    }),
+                    signal: uploadAbortController.signal
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    const successCount = data.data.filter(r => r.status === 'completed').length;
+                    updateUploadProgress(selectedIds.length, selectedIds.length, `识别完成！成功 ${successCount} 张`);
+                    
+                    setTimeout(() => {
+                        hideUploadProgress();
+                        // 恢复弹窗标题
+                        document.querySelector('.upload-progress-header h3').textContent = '文件上传中...';
+                        document.querySelector('.upload-progress-header i').className = 'fas fa-cloud-upload-alt';
+                        showMessage(`批量识别完成！成功识别 ${successCount} 张图片`, 'success');
+                    }, 500);
+                    
+                    loadCacheImages(); // 这会自动加载结果图片
+                } else {
+                    hideUploadProgress();
+                    // 恢复弹窗标题
+                    document.querySelector('.upload-progress-header h3').textContent = '文件上传中...';
+                    document.querySelector('.upload-progress-header i').className = 'fas fa-cloud-upload-alt';
+                    showMessage(`批量识别失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                hideUploadProgress();
+                // 恢复弹窗标题
+                document.querySelector('.upload-progress-header h3').textContent = '文件上传中...';
+                document.querySelector('.upload-progress-header i').className = 'fas fa-cloud-upload-alt';
+                
+                if (error.name === 'AbortError') {
+                    showMessage('识别已取消', 'info');
+                } else {
+                    showMessage(`批量识别失败: ${error.message}`, 'error');
+                }
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-brain"></i> 批量识别';
+            }
+        }
+        
+        // 批量上传 - 只上传已检测的图片
+        async function batchUpload() {
+            // 只获取已完成的图片
+            const completedImages = cachedImages.filter(img => img.status === 'completed');
+            if (completedImages.length === 0) {
+                showMessage('没有已检测的图片可上传', 'error');
+                return;
+            }
+            
+            if (isUploading) {
+                showMessage('正在上传中，请稍候...', 'info');
+                return;
+            }
+            
+            const btn = document.getElementById('upload-result-btn');
+            if (!btn) {
+                showMessage('找不到批量上传按钮', 'error');
+                return;
+            }
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 上传中...';
+            
+            // 使用上传进度弹窗
+            showUploadProgress(completedImages.length);
+            document.querySelector('.upload-progress-header h3').textContent = '正在上传到云端...';
+            
+            try {
+                updateUploadProgress(0, completedImages.length, '开始批量上传已检测的图片...');
+                
+                const response = await fetch('/api/batch/upload', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        image_ids: completedImages.map(img => img.id)
+                    }),
+                    signal: uploadAbortController.signal
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    const successCount = data.data.filter(r => r.status === 'uploaded').length;
+                    updateUploadProgress(completedImages.length, completedImages.length, `上传完成！成功 ${successCount} 张`);
+                    
+                    setTimeout(() => {
+                        hideUploadProgress();
+                        // 恢复弹窗标题
+                        document.querySelector('.upload-progress-header h3').textContent = '文件上传中...';
+                        showMessage(`批量上传完成！成功上传 ${successCount} 张图片`, 'success');
+                    }, 500);
+                    
+                    loadCacheImages();
+                } else {
+                    hideUploadProgress();
+                    // 恢复弹窗标题
+                    document.querySelector('.upload-progress-header h3').textContent = '文件上传中...';
+                    showMessage(`批量上传失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                hideUploadProgress();
+                // 恢复弹窗标题
+                document.querySelector('.upload-progress-header h3').textContent = '文件上传中...';
+                
+                if (error.name === 'AbortError') {
+                    showMessage('上传已取消', 'info');
+                } else {
+                    showMessage(`批量上传失败: ${error.message}`, 'error');
+                }
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> 批量上传结果';
+            }
+        }
+        
+        // 清空缓存 - 只清空原始图片，保留结果图片
+        async function clearCache() {
+            if (!confirm('确定要清空原始图片吗？结果图片将保留在results目录中！')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/batch/clear_cache', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        status: 'completed'  // 只清空已完成的图片
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage('原始图片已清空！结果图片已保留', 'success');
+                    loadCacheImages();
+                    loadResultImages(); // 重新加载结果图片
+                } else {
+                    showMessage(`清空缓存失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showMessage(`清空缓存失败: ${error.message}`, 'error');
+            }
+        }
+        
+        // 清空结果图片
+        async function clearResults() {
+            if (!confirm('确定要清空所有结果图片吗？此操作不可恢复！')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/batch/clear_results', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage('结果图片已清空！', 'success');
+                    loadResultImages(); // 重新加载结果图片
+                    clearConfidenceChart(); // 清空统计图表
+                } else {
+                    showMessage(`清空结果失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showMessage(`清空结果失败: ${error.message}`, 'error');
+            }
+        }
+        
+        // 打开平均置信度统计图表
+        function openConfidenceChart() {
+            calculateAndDisplayConfidenceStats();
+            chartModal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+        
+        // 关闭统计图表模态框
+        function closeConfidenceChart() {
+            chartModal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+        
+        // 计算并显示置信度统计数据
+        async function calculateAndDisplayConfidenceStats() {
+            try {
+                // 获取结果数据
+                const response = await fetch('/api/batch/results_status');
+                const data = await response.json();
+                
+                if (!data.success || !data.data.results || data.data.results.length === 0) {
+                    // 没有数据，显示空状态
+                    showEmptyChartState();
+                    return;
+                }
+                
+                const results = data.data.results;
+                
+                // 按类别统计置信度
+                const statsByClass = {};
+                
+                results.forEach(result => {
+                    const resultClass = result.result_class || '未知';
+                    const confidence = result.confidence || 0;
+                    
+                    if (!statsByClass[resultClass]) {
+                        statsByClass[resultClass] = {
+                            total: 0,
+                            count: 0,
+                            confidences: []
+                        };
+                    }
+                    
+                    statsByClass[resultClass].total += confidence;
+                    statsByClass[resultClass].count += 1;
+                    statsByClass[resultClass].confidences.push(confidence);
+                });
+                
+                // 计算平均值
+                const categories = [];
+                const avgConfidences = [];
+                const colors = [];
+                
+                // 颜色方案 - 更鲜艳的渐变配色
+                const colorScheme = [
+                    'rgba(52, 211, 153, 0.85)',   // 翡翠绿
+                    'rgba(59, 130, 246, 0.85)',   // 天蓝色
+                    'rgba(168, 85, 247, 0.85)',   // 紫罗兰
+                    'rgba(251, 191, 36, 0.85)',   // 金黄色
+                    'rgba(249, 115, 22, 0.85)',   // 活力橙
+                    'rgba(239, 68, 68, 0.85)',    // 珊瑚红
+                    'rgba(20, 184, 166, 0.85)',   // 青绿色
+                    'rgba(236, 72, 153, 0.85)',   // 玫瑰粉
+                    'rgba(99, 102, 241, 0.85)',   // 靛蓝色
+                    'rgba(139, 92, 246, 0.85)'    // 紫晶色
+                ];
+                
+                let colorIndex = 0;
+                const borderColors = [];
+                for (const [className, stats] of Object.entries(statsByClass)) {
+                    categories.push(className);
+                    avgConfidences.push((stats.total / stats.count * 100).toFixed(2));
+                    const bgColor = colorScheme[colorIndex % colorScheme.length];
+                    colors.push(bgColor);
+                    // 边框颜色更深一些
+                    borderColors.push(bgColor.replace('0.85', '1'));
+                    colorIndex++;
+                }
+                
+                // 绘制图表
+                drawConfidenceChart(categories, avgConfidences, colors, borderColors);
+                
+                // 显示统计摘要
+                displayStatsSummary(statsByClass, results.length);
+                
+            } catch (error) {
+                console.error('计算统计数据失败:', error);
+                showEmptyChartState();
+            }
+        }
+        
+        // 绘制置信度柱状图
+        function drawConfidenceChart(categories, avgConfidences, colors, borderColors) {
+            const canvas = document.getElementById('confidenceChart');
+            const emptyState = document.getElementById('chartEmptyState');
+            const statsSummary = document.getElementById('chartStatsSummary');
+            
+            // 隐藏空状态，显示画布和统计
+            emptyState.style.display = 'none';
+            canvas.style.display = 'block';
+            statsSummary.style.display = 'grid';
+            
+            // 销毁旧图表
+            if (confidenceChart) {
+                confidenceChart.destroy();
+            }
+            
+            // 创建新图表
+            const ctx = canvas.getContext('2d');
+            confidenceChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: categories,
+                    datasets: [{
+                        label: '平均置信度 (%)',
+                        data: avgConfidences,
+                        backgroundColor: colors,
+                        borderColor: borderColors || colors.map(c => c.replace('0.85', '1')),
+                        borderWidth: 3,
+                        borderRadius: 10,
+                        borderSkipped: false,
+                        hoverBackgroundColor: colors.map(c => c.replace('0.85', '0.95')),
+                        hoverBorderColor: borderColors || colors.map(c => c.replace('0.85', '1')),
+                        hoverBorderWidth: 4,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            labels: {
+                                color: '#2c3e50',
+                                font: {
+                                    size: 15,
+                                    weight: '600',
+                                    family: "'Segoe UI', 'Roboto', sans-serif"
+                                },
+                                padding: 20,
+                                usePointStyle: true,
+                                pointStyle: 'circle'
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(44, 62, 80, 0.95)',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            titleFont: {
+                                size: 14,
+                                weight: 'bold'
+                            },
+                            bodyFont: {
+                                size: 13
+                            },
+                            borderColor: 'rgba(0, 168, 255, 0.6)',
+                            borderWidth: 2,
+                            padding: 15,
+                            displayColors: true,
+                            boxPadding: 6,
+                            callbacks: {
+                                label: function(context) {
+                                    return '平均置信度: ' + context.parsed.y + '%';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                color: '#2c3e50',
+                                font: {
+                                    size: 13,
+                                    weight: '500'
+                                },
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(0, 168, 255, 0.15)',
+                                borderColor: 'rgba(0, 168, 255, 0.3)',
+                                borderWidth: 2,
+                                drawTicks: true,
+                                tickLength: 8
+                            },
+                            title: {
+                                display: true,
+                                text: '平均置信度 (%)',
+                                color: '#2c3e50',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: '#2c3e50',
+                                font: {
+                                    size: 13,
+                                    weight: '500'
+                                },
+                                maxRotation: 45,
+                                minRotation: 0
+                            },
+                            grid: {
+                                color: 'rgba(0, 168, 255, 0.08)',
+                                borderColor: 'rgba(0, 168, 255, 0.3)',
+                                borderWidth: 2
+                            },
+                            title: {
+                                display: true,
+                                text: '检测类别',
+                                color: '#2c3e50',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 1200,
+                        easing: 'easeOutQuart'
+                    }
+                }
+            });
+        }
+        
+        // 显示统计摘要卡片
+        function displayStatsSummary(statsByClass, totalResults) {
+            const summaryContainer = document.getElementById('chartStatsSummary');
+            summaryContainer.innerHTML = '';
+            
+            // 总结果数
+            const totalCard = createStatCard('总结果数', totalResults, 'fas fa-images');
+            summaryContainer.appendChild(totalCard);
+            
+            // 类别数
+            const classCount = Object.keys(statsByClass).length;
+            const classCard = createStatCard('类别数', classCount, 'fas fa-tags');
+            summaryContainer.appendChild(classCard);
+            
+            // 最高平均置信度
+            let maxAvg = 0;
+            let maxClass = '-';
+            for (const [className, stats] of Object.entries(statsByClass)) {
+                const avg = stats.total / stats.count;
+                if (avg > maxAvg) {
+                    maxAvg = avg;
+                    maxClass = className;
+                }
+            }
+            const maxCard = createStatCard('最高平均', `${(maxAvg * 100).toFixed(1)}%`, 'fas fa-trophy');
+            maxCard.querySelector('.chart-stat-label').textContent = `最高平均 (${maxClass})`;
+            summaryContainer.appendChild(maxCard);
+            
+            // 整体平均置信度
+            let totalConfidence = 0;
+            Object.values(statsByClass).forEach(stats => {
+                totalConfidence += stats.total;
+            });
+            const overallAvg = (totalConfidence / totalResults * 100).toFixed(1);
+            const avgCard = createStatCard('整体平均', overallAvg + '%', 'fas fa-chart-line');
+            summaryContainer.appendChild(avgCard);
+        }
+        
+        // 创建统计卡片
+        function createStatCard(label, value, iconClass) {
+            // 为不同类型的统计卡片分配不同颜色
+            const iconColors = {
+                'fa-images': '#3498db',      // 蓝色 - 总结果数
+                'fa-tags': '#9b59b6',        // 紫色 - 类别数
+                'fa-trophy': '#f39c12',      // 金色 - 最高平均
+                'fa-chart-line': '#2ecc71'   // 绿色 - 整体平均
+            };
+            
+            // 根据图标类获取颜色
+            let iconColor = '#00a8ff'; // 默认颜色
+            for (const [key, color] of Object.entries(iconColors)) {
+                if (iconClass.includes(key)) {
+                    iconColor = color;
+                    break;
+                }
+            }
+            
+            const card = document.createElement('div');
+            card.className = 'chart-stat-card';
+            card.innerHTML = `
+                <div style="margin-bottom: 10px;">
+                    <i class="${iconClass}" style="color: ${iconColor}; font-size: 2rem; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));"></i>
+                </div>
+                <div class="chart-stat-label">${label}</div>
+                <div class="chart-stat-value">${value}</div>
+            `;
+            return card;
+        }
+        
+        // 显示空图表状态
+        function showEmptyChartState() {
+            const canvas = document.getElementById('confidenceChart');
+            const emptyState = document.getElementById('chartEmptyState');
+            const statsSummary = document.getElementById('chartStatsSummary');
+            
+            canvas.style.display = 'none';
+            emptyState.style.display = 'flex';
+            statsSummary.style.display = 'none';
+            
+            if (confidenceChart) {
+                confidenceChart.destroy();
+                confidenceChart = null;
+            }
+        }
+        
+        // 清空置信度图表
+        function clearConfidenceChart() {
+            showEmptyChartState();
+        }
+        
+        // 删除单个缓存图片
+        async function removeCachedImage(imageId) {
+            if (!confirm('确定要删除这张图片吗？')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/batch/remove_image', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        image_id: imageId
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage('图片已删除！', 'success');
+                    loadCacheImages();
+                } else {
+                    showMessage(`删除图片失败: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showMessage(`删除图片失败: ${error.message}`, 'error');
+            }
+        }
+        
+        // 显示/隐藏进度条
+        function showProgress(show) {
+            const progress = document.getElementById('batch-progress');
+            progress.style.display = show ? 'block' : 'none';
+        }
+        
+        // 更新进度
+        function updateProgress(percent, text) {
+            document.getElementById('progress-fill').style.width = percent + '%';
+            document.getElementById('progress-text').textContent = text;
+        }
+        
+        // 显示消息
+        function showMessage(message, type = 'info') {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message message-${type}`;
+            messageDiv.textContent = message;
+            messageDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 25px;
+                border-radius: 12px;
+                color: white;
+                font-weight: 500;
+                z-index: 1000;
+                animation: slideIn 0.3s ease;
+                backdrop-filter: blur(20px);
+                box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+            `;
+            
+            if (type === 'success') {
+                messageDiv.style.background = 'linear-gradient(135deg, #00d4ff, #00a8ff)';
+            } else if (type === 'error') {
+                messageDiv.style.background = 'linear-gradient(135deg, #ff6b6b, #ee5a52)';
+            } else {
+                messageDiv.style.background = 'linear-gradient(135deg, var(--primary), var(--secondary))';
+            }
+            
+            document.body.appendChild(messageDiv);
+            
+            setTimeout(() => {
+                if (messageDiv.parentNode) {
+                    messageDiv.parentNode.removeChild(messageDiv);
+                }
+            }, 3000);
+        }
+
+
+
+
+        
+        // 打开图片模态框（用于缓存图片）
+        function openImageModal(src, filename, index) {
+            currentImageIndex = index;
+            modalImage.src = src;
+            modalFilename.textContent = filename;
+            
+            // 计算当前图片在缓存中的位置
+            const totalImages = cachedImages.length;
+            modalCounter.textContent = `${index + 1} / ${totalImages}`;
+            
+            // 添加图片加载错误处理
+            modalImage.onerror = function() {
+                console.error('模态框图片加载失败:', src);
+                modalImage.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDQwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjMzMzIi8+Cjx0ZXh0IHg9IjIwMCIgeT0iMTUwIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTgiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiPuWbvueJh+WKoOi9veWksei0pTwvdGV4dD4KPC9zdmc+Cg==';
+            };
+            
+            // 显示/隐藏导航按钮
+            if (totalImages > 1) {
+                modalPrev.style.display = 'block';
+                modalNext.style.display = 'block';
+            } else {
+                modalPrev.style.display = 'none';
+                modalNext.style.display = 'none';
+            }
+            
+            // 显示模态框
+            imageModal.style.display = 'block';
+            document.body.style.overflow = 'hidden'; // 防止背景滚动
+        }
+        
+        // 打开结果图片模态框
+        function openResultImageModal(src, filename, index) {
+            currentImageIndex = index;
+            modalImage.src = src;
+            modalFilename.textContent = filename;
+            
+            // 计算当前图片在结果中的位置
+            const resultImages = document.querySelectorAll('#result-preview .preview-item');
+            const totalImages = resultImages.length;
+            modalCounter.textContent = `${index + 1} / ${totalImages}`;
+            
+            // 添加图片加载错误处理
+            modalImage.onerror = function() {
+                console.error('模态框图片加载失败:', src);
+                modalImage.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDQwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjMzMzIi8+Cjx0ZXh0IHg9IjIwMCIgeT0iMTUwIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTgiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiPuWbvueJh+WKoOi9veWksei0pTwvdGV4dD4KPC9zdmc+Cg==';
+            };
+            
+            // 显示/隐藏导航按钮
+            if (totalImages > 1) {
+                modalPrev.style.display = 'block';
+                modalNext.style.display = 'block';
+            } else {
+                modalPrev.style.display = 'none';
+                modalNext.style.display = 'none';
+            }
+            
+            // 显示模态框
+            imageModal.style.display = 'block';
+            document.body.style.overflow = 'hidden'; // 防止背景滚动
+        }
+        
+        // 关闭图片模态框
+        function closeImageModal() {
+            imageModal.style.display = 'none';
+            document.body.style.overflow = 'auto'; // 恢复滚动
+            modalImage.classList.remove('zoomed'); // 重置缩放状态
+        }
+        
+        // 显示上一张图片
+        function showPrevImage() {
+            const totalImages = cachedImages.length;
+            if (totalImages <= 1) return;
+            currentImageIndex = (currentImageIndex - 1 + totalImages) % totalImages;
+            updateModalImage();
+        }
+        
+        // 显示下一张图片
+        function showNextImage() {
+            const totalImages = cachedImages.length;
+            if (totalImages <= 1) return;
+            currentImageIndex = (currentImageIndex + 1) % totalImages;
+            updateModalImage();
+        }
+        
+        // 更新模态框中的图片
+        function updateModalImage() {
+            const img = cachedImages[currentImageIndex];
+            if (img) {
+                modalImage.src = `/static/data/local_cache/images/${img.cached_filename}`;
+                modalFilename.textContent = img.filename;
+                modalCounter.textContent = `${currentImageIndex + 1} / ${cachedImages.length}`;
+                    modalImage.classList.remove('zoomed'); // 重置缩放状态
+            }
+        }
+        
+        // 切换图片缩放状态
+        function toggleImageZoom() {
+            modalImage.classList.toggle('zoomed');
+        }
+        
+        // 事件监听器
+        modalClose.addEventListener('click', closeImageModal);
+        modalPrev.addEventListener('click', showPrevImage);
+        modalNext.addEventListener('click', showNextImage);
+        modalImage.addEventListener('click', toggleImageZoom);
+        
+        // 点击模态框背景关闭
+        imageModal.addEventListener('click', function(e) {
+            if (e.target === imageModal) {
+                closeImageModal();
+            }
+        });
+        
+        // 键盘导航
+        document.addEventListener('keydown', function(e) {
+            if (imageModal.style.display === 'block') {
+                switch(e.key) {
+                    case 'Escape':
+                        closeImageModal();
+                        break;
+                    case 'ArrowLeft':
+                        showPrevImage();
+                        break;
+                    case 'ArrowRight':
+                        showNextImage();
+                        break;
+                    case ' ':
+                        e.preventDefault();
+                        toggleImageZoom();
+                        break;
+                }
+            }
+        });
+        
+        // 添加事件监听器
+        document.addEventListener('DOMContentLoaded', function() {
+            // 缓存管理按钮事件
+            const selectAllBtn = document.getElementById('select-all-btn');
+            const batchRecognizeBtn = document.getElementById('batch-recognize-btn');
+            const clearCacheBtn = document.getElementById('clear-cache-btn');
+            const refreshCacheBtn = document.getElementById('refresh-cache-btn');
+            
+            if (selectAllBtn) {
+                selectAllBtn.addEventListener('click', toggleSelectAll);
+            }
+            if (batchRecognizeBtn) {
+                batchRecognizeBtn.addEventListener('click', batchRecognize);
+            }
+            if (clearCacheBtn) {
+                clearCacheBtn.addEventListener('click', clearCache);
+            }
+            if (refreshCacheBtn) {
+                refreshCacheBtn.addEventListener('click', loadCacheImages);
+            }
+            
+            // 结果图片管理按钮事件
+            const uploadResultBtn = document.getElementById('upload-result-btn');
+            const clearResultBtn = document.getElementById('clear-result-btn');
+            
+            if (uploadResultBtn) {
+                uploadResultBtn.addEventListener('click', batchUpload);
+            }
+            if (clearResultBtn) {
+                clearResultBtn.addEventListener('click', clearResults);
+            }
+            
+            // 平均置信度按钮事件
+            const avgConfidenceBtn = document.getElementById('avg-confidence-btn');
+            if (avgConfidenceBtn) {
+                avgConfidenceBtn.addEventListener('click', openConfidenceChart);
+            }
+            
+            // 图表模态框关闭事件
+            if (chartModalClose) {
+                chartModalClose.addEventListener('click', closeConfidenceChart);
+            }
+            
+            // 点击模态框背景关闭
+            chartModal.addEventListener('click', function(e) {
+                if (e.target === chartModal) {
+                    closeConfidenceChart();
+                }
+            });
+            
+            // 停止上传按钮事件
+            const uploadStopBtn = document.getElementById('uploadStopBtn');
+            if (uploadStopBtn) {
+                uploadStopBtn.addEventListener('click', stopUpload);
+            }
+            
+            // 初始化缓存
+            loadCacheImages();
+            
+            // 添加科技感动态效果
+            const previewItems = document.querySelectorAll('.preview-item');
+            previewItems.forEach(item => {
+                item.addEventListener('mouseenter', () => {
+                    item.style.boxShadow = '0 0 15px rgba(10, 132, 255, 0.7)';
+                });
+                item.addEventListener('mouseleave', () => {
+                    item.style.boxShadow = '0 5px 15px rgba(0, 0, 0, 0.3)';
+                });
+            });
+        });
+    </script>
+</body>
+</html>

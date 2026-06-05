@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大模型镜片识别瑕疵 - 登录</title>
+    <style>
+        :root {
+            --primary: #0066ff;
+            --secondary: #00ccff;
+            --accent: #0099ff;
+            --dark: #0a0a0f;
+            --darker: #050508;
+            --light: #1a1a2e;
+            --card-bg: rgba(10, 10, 15, 0.9);
+            --card-border: rgba(0, 102, 255, 0.3);
+            --glow: 0 0 30px rgba(0, 102, 255, 0.4);
+            --text-primary: #ffffff;
+            --text-secondary: #b0b0b0;
+            --neon-pink: #00ccff;
+            --neon-purple: #0099ff;
+            --neon-blue: #0066ff;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', 'Roboto', sans-serif;
+            background: var(--darker);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('/static/images/background.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            opacity: 0.4;
+            z-index: -2;
+        }
+        
+        body::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(0, 255, 234, 0.05) 0%, rgba(255, 0, 234, 0.05) 100%);
+            z-index: -1;
+        }
+        
+        /* 数字雨效果 */
+        .matrix-rain {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+            opacity: 0.15;
+        }
+        
+        .matrix-column {
+            position: absolute;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            color: var(--neon-blue);
+            animation: matrix-fall linear infinite;
+        }
+        
+        @keyframes matrix-fall {
+            0% {
+                transform: translateY(-100%);
+            }
+            100% {
+                transform: translateY(100vh);
+            }
+        }
+        
+        /* 粒子画布 */
+        #particleCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 25;
+            pointer-events: none;
+        }
+        
+        .login-container {
+            display: flex;
+            background: rgba(10, 10, 15, 0.7);
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            backdrop-filter: blur(15px);
+            box-shadow: 
+                0 0 30px rgba(0, 102, 255, 0.2),
+                0 0 60px rgba(0, 204, 255, 0.1),
+                inset 0 0 30px rgba(0, 102, 255, 0.05);
+            overflow: hidden;
+            width: 700px;
+            height: 400px;
+            position: relative;
+            z-index: 20;
+            transition: all 0.3s ease;
+            pointer-events: auto;
+        }
+        
+        .login-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, transparent 49%, var(--neon-blue) 50%, transparent 51%);
+            background-size: 20px 20px;
+            opacity: 0.05;
+            z-index: -1;
+        }
+        
+        .image-section {
+            flex: 1;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        
+        .image-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                linear-gradient(90deg, transparent 0%, var(--neon-blue) 50%, transparent 100%),
+                linear-gradient(0deg, transparent 0%, var(--neon-pink) 50%, transparent 100%);
+            background-size: 100% 2px, 2px 100%;
+            opacity: 0.1;
+            animation: scanlines 3s linear infinite;
+            z-index: 1;
+        }
+        
+        .image-section::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(0, 255, 234, 0.1) 0%, rgba(255, 0, 234, 0.1) 100%);
+            z-index: 2;
+        }
+        
+        @keyframes scanlines {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        .image-content {
+            position: relative;
+            z-index: 3;
+            text-align: center;
+            color: white;
+        }
+        
+        .image-content h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+            letter-spacing: 3px;
+            color: #ffffff;
+            text-shadow: 
+                0 0 10px rgba(0, 204, 255, 0.8),
+                0 0 20px rgba(0, 204, 255, 0.6),
+                0 0 30px rgba(0, 204, 255, 0.4),
+                0 0 40px rgba(0, 204, 255, 0.2);
+            animation: titleGlow 2s ease-in-out infinite alternate;
+        }
+        
+        .image-content p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            font-weight: 300;
+            color: #ffffff;
+            text-shadow: 
+                0 0 10px rgba(0, 204, 255, 0.6),
+                0 0 20px rgba(0, 204, 255, 0.4),
+                0 0 30px rgba(0, 204, 255, 0.2);
+        }
+        
+        @keyframes glitch {
+            0%, 100% {
+                transform: translateX(0);
+            }
+            20% {
+                transform: translateX(-2px) skew(-1deg);
+            }
+            40% {
+                transform: translateX(2px) skew(1deg);
+            }
+            60% {
+                transform: translateX(-1px) skew(-0.5deg);
+            }
+            80% {
+                transform: translateX(1px) skew(0.5deg);
+            }
+        }
+        
+        .form-section {
+            flex: 1;
+            padding: 50px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background: var(--light);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .form-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                linear-gradient(90deg, transparent 0%, var(--neon-purple) 50%, transparent 100%);
+            background-size: 200% 1px;
+            opacity: 0.1;
+            animation: scanlines 4s linear infinite;
+            z-index: 0;
+        }
+        
+        .logo {
+            text-align: center;
+            margin-bottom: 40px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .logo h2 {
+            font-size: 1.8rem;
+            background: linear-gradient(to right, var(--neon-blue), var(--neon-pink));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 10px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(0, 255, 234, 0.3);
+        }
+        
+        .logo p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 15px 20px;
+            background: rgba(10, 10, 15, 0.8);
+            border: 1px solid var(--neon-blue);
+            border-radius: 5px;
+            font-size: 16px;
+            color: var(--neon-blue);
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .form-group input::placeholder {
+            color: var(--text-secondary);
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--neon-pink);
+            box-shadow: 
+                0 0 10px var(--neon-blue),
+                0 0 20px var(--neon-pink),
+                inset 0 0 10px rgba(0, 255, 234, 0.1);
+            background: rgba(10, 10, 15, 0.95);
+        }
+        
+        .form-group input:hover {
+            border-color: var(--neon-purple);
+            box-shadow: 0 0 15px rgba(234, 0, 255, 0.3);
+        }
+        
+        .login-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, var(--neon-blue), var(--neon-pink));
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 
+                0 0 15px var(--neon-blue),
+                0 0 30px var(--neon-pink);
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .login-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            transition: left 0.5s;
+            z-index: -1;
+        }
+        
+        .login-btn:hover::before {
+            left: 100%;
+        }
+        
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 
+                0 0 20px var(--neon-blue),
+                0 0 40px var(--neon-pink),
+                0 0 60px var(--neon-purple);
+        }
+        
+        .login-btn:active {
+            transform: translateY(0);
+            box-shadow: 
+                0 0 10px var(--neon-blue),
+                0 0 20px var(--neon-pink);
+        }
+        
+        .error-message {
+            color: #ff006e;
+            font-size: 14px;
+            margin-top: 10px;
+            text-align: center;
+            background: rgba(255, 0, 110, 0.1);
+            padding: 8px 12px;
+            border-radius: 5px;
+            border: 1px solid #ff006e;
+            box-shadow: 0 0 10px rgba(255, 0, 110, 0.5);
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* 主标题样式 */
+        .main-title {
+            position: absolute;
+            top: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            z-index: 30;
+            pointer-events: none;
+        }
+        
+        .main-title h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 10px;
+            text-shadow: 
+                0 0 10px rgba(0, 204, 255, 0.8),
+                0 0 20px rgba(0, 204, 255, 0.6),
+                0 0 30px rgba(0, 204, 255, 0.4),
+                0 0 40px rgba(0, 204, 255, 0.2);
+            letter-spacing: 4px;
+            animation: titleGlow 2s ease-in-out infinite alternate;
+        }
+        
+        .main-title p {
+            font-size: 1.2rem;
+            color: #ffffff;
+            opacity: 0.9;
+            text-shadow: 
+                0 0 10px rgba(0, 204, 255, 0.6),
+                0 0 20px rgba(0, 204, 255, 0.4);
+            letter-spacing: 2px;
+        }
+        
+        /* 功能卡片样式 */
+        .feature-cards {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 20px;
+            z-index: 30;
+            pointer-events: none;
+        }
+        
+        .feature-card {
+            background: rgba(10, 10, 15, 0.7);
+            border: 1px solid rgba(0, 204, 255, 0.3);
+            border-radius: 12px;
+            padding: 20px 15px;
+            text-align: center;
+            min-width: 120px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            pointer-events: auto;
+            cursor: pointer;
+            box-shadow: 
+                0 0 15px rgba(0, 204, 255, 0.1),
+                inset 0 0 20px rgba(0, 204, 255, 0.05);
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-8px);
+            border-color: rgba(0, 204, 255, 0.6);
+            box-shadow: 
+                0 0 25px rgba(0, 204, 255, 0.25),
+                0 0 40px rgba(0, 204, 255, 0.1),
+                inset 0 0 25px rgba(0, 204, 255, 0.1);
+        }
+        
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: #00ccff;
+            text-shadow: 0 0 10px rgba(0, 204, 255, 0.8);
+            transition: transform 0.3s ease;
+        }
+        
+        .feature-card:hover .feature-icon {
+            transform: scale(1.2);
+        }
+        
+        .feature-title {
+            font-size: 14px;
+            color: #ffffff;
+            font-weight: 600;
+            margin-bottom: 5px;
+            letter-spacing: 1px;
+        }
+        
+        .feature-desc {
+            font-size: 12px;
+            color: #888888;
+            line-height: 1.4;
+        }
+        
+        @keyframes titleGlow {
+            0% {
+                text-shadow: 
+                    0 0 10px rgba(0, 204, 255, 0.8),
+                    0 0 20px rgba(0, 204, 255, 0.6),
+                    0 0 30px rgba(0, 204, 255, 0.4),
+                    0 0 40px rgba(0, 204, 255, 0.2);
+            }
+            100% {
+                text-shadow: 
+                    0 0 15px rgba(0, 204, 255, 1),
+                    0 0 25px rgba(0, 204, 255, 0.8),
+                    0 0 35px rgba(0, 204, 255, 0.6),
+                    0 0 50px rgba(0, 204, 255, 0.4);
+            }
+        }
+        
+        /* 科技感装饰元素 */
+        .tech-decoration {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        .tech-line {
+            position: absolute;
+            background: linear-gradient(90deg, transparent, var(--neon-blue), transparent);
+            height: 1px;
+            animation: techMove 3s infinite linear;
+            box-shadow: 0 0 10px var(--neon-blue);
+        }
+        
+        .tech-line:nth-child(1) {
+            top: 20%;
+            width: 60%;
+            animation-delay: 0s;
+        }
+        
+        .tech-line:nth-child(2) {
+            top: 40%;
+            width: 80%;
+            animation-delay: 1s;
+            background: linear-gradient(90deg, transparent, var(--neon-pink), transparent);
+            box-shadow: 0 0 10px var(--neon-pink);
+        }
+        
+        .tech-line:nth-child(3) {
+            top: 60%;
+            width: 40%;
+            animation-delay: 2s;
+        }
+        
+        .tech-line:nth-child(4) {
+            top: 80%;
+            width: 70%;
+            animation-delay: 3s;
+            background: linear-gradient(90deg, transparent, var(--neon-purple), transparent);
+            box-shadow: 0 0 10px var(--neon-purple);
+        }
+        
+        @keyframes techMove {
+            0% { transform: translateX(-100%); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: translateX(100%); opacity: 0; }
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .login-container {
+                flex-direction: column;
+                width: 90%;
+                height: auto;
+                margin: 20px;
+                box-shadow: 
+                    0 0 20px rgba(0, 255, 234, 0.2),
+                    0 0 40px rgba(255, 0, 234, 0.1);
+            }
+            
+            .image-section {
+                height: 200px;
+            }
+            
+            .image-content h1 {
+                font-size: 2rem;
+            }
+            
+            .image-content p {
+                font-size: 1rem;
+            }
+            
+            .form-section {
+                padding: 30px;
+            }
+            
+            .logo h2 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="particleCanvas"></canvas>
+    
+    <div class="main-title">
+        <h2>大模型镜片识别瑕疵</h2>
+        <p>基于深度学习的智能检测平台</p>
+    </div>
+    
+    <div class="feature-cards">
+        <div class="feature-card">
+            <div class="feature-icon">🤖</div>
+            <div class="feature-title">AI分析</div>
+            <div class="feature-desc">深度学习驱动的智能分析引擎</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🎯</div>
+            <div class="feature-title">目标检测</div>
+            <div class="feature-desc">高精度目标识别与定位</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">📊</div>
+            <div class="feature-title">数据分析</div>
+            <div class="feature-desc">可视化数据报表生成</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">⚡</div>
+            <div class="feature-title">实时处理</div>
+            <div class="feature-desc">毫秒级响应检测速度</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🔒</div>
+            <div class="feature-title">安全可靠</div>
+            <div class="feature-desc">数据加密与隐私保护</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">☁️</div>
+            <div class="feature-title">云端同步</div>
+            <div class="feature-desc">多端数据实时同步</div>
+        </div>
+    </div>
+    
+    <div class="login-container" style="opacity: 0;">
+        <div class="image-section">
+            <div class="tech-decoration">
+                <div class="tech-line"></div>
+                <div class="tech-line"></div>
+                <div class="tech-line"></div>
+            </div>
+            <div class="image-content">
+                <h1>AI VISION</h1>
+                <p>智能镜片瑕疵识别系统</p>
+            </div>
+        </div>
+        <div class="form-section">
+            <form method="post">
+                <div class="form-group">
+                    <input type="text" name="username" placeholder="请输入用户名" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" name="pwd" placeholder="请输入密码" required>
+                </div>
+                <button type="submit" class="login-btn">
+                    <span>登录系统</span>
+                </button>
+                {% if error %}
+                <div class="error-message">{{ error }}</div>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+    <script>
+        // 智镜检测功能模拟
+        function initSmartMirrorDetection() {
+            console.log('智镜检测功能初始化');
+            // 这里可以添加实际的智镜检测功能代码
+        }
+        
+        // 初始化智镜检测功能
+        initSmartMirrorDetection();
+        
+        // 高级粒子系统
+        document.addEventListener('DOMContentLoaded', function() {
+            const canvas = document.getElementById('particleCanvas');
+            const ctx = canvas.getContext('2d');
+            const loginContainer = document.querySelector('.login-container');
+            
+            // 设置画布大小
+            function resizeCanvas() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+            
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            // 鼠标位置
+            let mouse = {
+                x: window.innerWidth / 2,
+                y: window.innerHeight / 2,
+                radius: 150
+            };
+            
+            // 粒子配置
+            const particles = [];
+            const particleCount = 300;
+            const targetWidth = 700;
+            const targetHeight = 400;
+            const targetX = (window.innerWidth - targetWidth) / 2;
+            const targetY = (window.innerHeight - targetHeight) / 2;
+            
+            // 鼠标移动事件
+            window.addEventListener('mousemove', function(e) {
+                mouse.x = e.clientX;
+                mouse.y = e.clientY;
+            }, true);
+            
+            // 创建粒子
+            for (let i = 0; i < particleCount; i++) {
+                particles.push({
+                    x: Math.random() * window.innerWidth,
+                    y: Math.random() * window.innerHeight,
+                    size: Math.random() * 3 + 1,
+                    speedX: (Math.random() - 0.5) * 1.5,
+                    speedY: (Math.random() - 0.5) * 1.5,
+                    color: getRandomColor(),
+                    opacity: Math.random() * 0.5 + 0.2,
+                    targetX: targetX + Math.random() * targetWidth,
+                    targetY: targetY + Math.random() * targetHeight,
+                    progress: 0,
+                    delay: Math.random() * 1000,
+                    isAttracted: false,
+                    attractionStrength: 0
+                });
+            }
+            
+            function getRandomColor() {
+                const colors = ['#0066ff', '#00ccff', '#0099ff'];
+                return colors[Math.floor(Math.random() * colors.length)];
+            }
+            
+            // 计算距离
+            function getDistance(x1, y1, x2, y2) {
+                return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+            }
+            
+            // 动画循环
+            let startTime = Date.now();
+            let showLogin = false;
+            let fadeOutProgress = 0;
+            const showDelay = 3000;
+            const fadeOutDuration = 500;
+            
+            setTimeout(() => {
+                showLogin = true;
+            }, showDelay);
+            
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                const elapsed = Date.now() - startTime;
+                let allParticlesReady = true;
+                
+                if (showLogin && fadeOutProgress < 1) {
+                    fadeOutProgress += 0.02;
+                }
+                const opacity = 1 - fadeOutProgress;
+                
+                particles.forEach((particle, index) => {
+                    if (elapsed < particle.delay) {
+                        allParticlesReady = false;
+                        return;
+                    }
+                    
+                    if (particle.progress < 1) {
+                        particle.progress += 0.005;
+                        allParticlesReady = false;
+                        
+                        const ease = 1 - Math.pow(1 - particle.progress, 3);
+                        
+                        particle.x += (particle.targetX - particle.x) * 0.03;
+                        particle.y += (particle.targetY - particle.y) * 0.03;
+                        
+                        ctx.fillStyle = particle.color;
+                        ctx.globalAlpha = ease * particle.opacity * opacity;
+                        ctx.beginPath();
+                        ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        ctx.strokeStyle = particle.color;
+                        ctx.globalAlpha = ease * 0.3 * opacity;
+                        ctx.beginPath();
+                        ctx.moveTo(particle.x, particle.y);
+                        ctx.lineTo(particle.targetX, particle.targetY);
+                        ctx.stroke();
+                    } else {
+                        const distance = getDistance(particle.x, particle.y, mouse.x, mouse.y);
+                        
+                        if (distance < mouse.radius) {
+                            const forceDirectionX = mouse.x - particle.x;
+                            const forceDirectionY = mouse.y - particle.y;
+                            const force = (mouse.radius - distance) / mouse.radius;
+                            
+                            particle.isAttracted = true;
+                            particle.attractionStrength = force;
+                            
+                            const newX = particle.x + (forceDirectionX * force) * 0.3;
+                            const newY = particle.y + (forceDirectionY * force) * 0.3;
+                            
+                            if (newX > 0 && newX < canvas.width && newY > 0 && newY < canvas.height) {
+                                particle.x = newX;
+                                particle.y = newY;
+                            }
+                        } else {
+                            if (particle.isAttracted) {
+                                particle.x += (particle.targetX - particle.x) * 0.08;
+                                particle.y += (particle.targetY - particle.y) * 0.08;
+                                
+                                if (getDistance(particle.x, particle.y, particle.targetX, particle.targetY) < 5) {
+                                    particle.isAttracted = false;
+                                    particle.attractionStrength = 0;
+                                }
+                            }
+                        }
+                        
+                        const size = particle.isAttracted ? particle.size * (1 + particle.attractionStrength) : particle.size;
+                        ctx.fillStyle = particle.color;
+                        ctx.globalAlpha = particle.opacity * opacity;
+                        ctx.beginPath();
+                        ctx.arc(particle.x, particle.y, size, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                });
+                
+                ctx.globalAlpha = 0.1 * opacity;
+                for (let i = 0; i < particles.length; i++) {
+                    for (let j = i + 1; j < particles.length; j++) {
+                        const distance = getDistance(particles[i].x, particles[i].y, particles[j].x, particles[j].y);
+                        if (distance < 100) {
+                            ctx.strokeStyle = particles[i].color;
+                            ctx.lineWidth = (100 - distance) / 100 * 2;
+                            ctx.beginPath();
+                            ctx.moveTo(particles[i].x, particles[i].y);
+                            ctx.lineTo(particles[j].x, particles[j].y);
+                            ctx.stroke();
+                        }
+                    }
+                }
+                
+                ctx.globalAlpha = 1;
+                
+                if (showLogin) {
+                    loginContainer.style.transition = 'opacity 0.6s ease-in-out';
+                    loginContainer.style.opacity = '1';
+                    
+                    if (fadeOutProgress >= 1) {
+                        canvas.style.opacity = '0';
+                        canvas.style.pointerEvents = 'none';
+                        return;
+                    }
+                }
+                
+                requestAnimationFrame(animate);
+            }
+            
+            animate();
+        });
+    </script>
+</body>
+</html>

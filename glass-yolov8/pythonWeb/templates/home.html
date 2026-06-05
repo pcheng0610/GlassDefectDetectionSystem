@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>主页 - 大模型镜片识别</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #0EA5E9;
+            --secondary: #10B981;
+            --accent: #F59E0B;
+            --dark: #0F172A;
+            --darker: #020617;
+            --light: #F8FAFC;
+            --card-bg: rgba(0, 0, 0, 0.9);
+            --card-border: #fff;
+            --glow: 0 0 40px rgba(14, 165, 233, 0.6);
+            --text-primary: #F8FAFC;
+            --text-secondary: #94A3B8;
+            --neon-blue: #0EA5E9;
+            --neon-green: #10B981;
+            --neon-orange: #F59E0B;
+            --neon-cyan: #06B6D4;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', 'Roboto', sans-serif;
+            background: #000000;
+            color: #fff;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        #meteor-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+        
+        .container {
+            background: transparent;
+            border: 2px solid #000;
+            border-radius: 24px;
+            padding: 50px 45px;
+            text-align: center;
+            max-width: 850px;
+            width: 90%;
+            position: relative;
+            z-index: 10;
+            overflow: hidden;
+        }
+        
+        
+        .header {
+            margin-bottom: 40px;
+        }
+        
+        .header h1 {
+            font-size: 3rem;
+            color: var(--neon-blue);
+            margin-bottom: 15px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-shadow: 0 2px 8px rgba(0, 102, 255, 0.3);
+        }
+        
+        .header p {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            font-weight: 400;
+            letter-spacing: 0.5px;
+        }
+        
+        .function-box {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 25px;
+            margin: 40px 0;
+        }
+        
+        .function-box a {
+            text-decoration: none;
+            display: block;
+        }
+        
+        .box {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 35px 25px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(15px);
+            position: relative;
+            overflow: hidden;
+            text-decoration: none;
+            color: var(--text-primary);
+            box-shadow: 
+                0 4px 20px rgba(0, 102, 255, 0.1),
+                0 1px 3px rgba(0, 102, 255, 0.05);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 250px;
+        }
+        
+        .box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 102, 255, 0.05), transparent);
+            transition: left 0.5s;
+            z-index: 0;
+        }
+        
+        .box:hover::before {
+            left: 100%;
+        }
+        
+        .box:hover {
+            transform: translateY(-8px) scale(1.02);
+            border-color: var(--neon-blue);
+            box-shadow: 
+                0 12px 40px rgba(0, 102, 255, 0.15),
+                0 4px 12px rgba(0, 102, 255, 0.1),
+                inset 0 0 30px rgba(0, 102, 255, 0.05);
+        }
+        
+        .box:active {
+            transform: translateY(-4px) scale(0.98);
+        }
+        
+        .box-icon-wrapper {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border-radius: 16px;
+            transition: all 0.3s ease;
+            box-shadow: 
+                0 4px 12px rgba(0, 102, 255, 0.3),
+                inset 0 -2px 8px rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 1;
+        }
+        
+        .box-icon-wrapper::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, transparent 50%);
+            border-radius: 16px;
+        }
+        
+        .box:hover .box-icon-wrapper {
+            transform: scale(1.1);
+            box-shadow: 
+                0 8px 20px rgba(0, 102, 255, 0.4),
+                inset 0 -2px 8px rgba(0, 0, 0, 0.15);
+        }
+        
+        .box-icon {
+            font-size: 2.5rem;
+            color: var(--darker);
+            transition: all 0.3s ease;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+            z-index: 2;
+            position: relative;
+        }
+        
+        .box:hover .box-icon {
+            transform: scale(1.15) rotate(5deg);
+        }
+        
+        .box-content {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+        }
+        
+        .box h3 {
+            font-size: 1.25rem;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: var(--neon-blue);
+            transition: all 0.3s ease;
+        }
+        
+        .box:hover h3 {
+            color: var(--neon-cyan);
+            text-shadow: 0 0 10px rgba(0, 204, 255, 0.5);
+        }
+        
+        .box p {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            line-height: 1.5;
+            font-weight: 400;
+            transition: all 0.3s ease;
+        }
+        
+        .box:hover p {
+            color: var(--text-primary);
+        }
+        
+        .logout-btn {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 
+                0 4px 14px rgba(0, 102, 255, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+            letter-spacing: 0.3px;
+            margin-top: 10px;
+            text-transform: uppercase;
+        }
+        
+        .logout-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            transition: left 0.5s;
+            z-index: 1;
+        }
+        
+        .logout-btn:hover::before {
+            left: 100%;
+        }
+        
+        .logout-btn span {
+            position: relative;
+            z-index: 2;
+        }
+        
+        .logout-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 
+                0 6px 20px rgba(0, 102, 255, 0.3),
+                0 0 15px rgba(0, 204, 255, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        }
+        
+        .logout-btn:active {
+            transform: translateY(0);
+            box-shadow: 
+                0 2px 8px rgba(0, 102, 255, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 35px 25px;
+                margin: 15px;
+                border-radius: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+                letter-spacing: 1px;
+            }
+            
+            .header p {
+                font-size: 0.9rem;
+            }
+            
+            .function-box {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                margin: 30px 0;
+            }
+            
+            .box {
+                padding: 30px 20px;
+            }
+            
+            .box-icon-wrapper {
+                width: 70px;
+                height: 70px;
+                margin-bottom: 18px;
+            }
+            
+            .box-icon {
+                font-size: 2.2rem;
+            }
+            
+            .box h3 {
+                font-size: 1.15rem;
+            }
+            
+            .box p {
+                font-size: 0.85rem;
+            }
+            
+            .logout-btn {
+                padding: 12px 28px;
+                font-size: 14px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                padding: 30px 20px;
+                margin: 10px;
+            }
+            
+            .header h1 {
+                font-size: 1.75rem;
+            }
+            
+            .header p {
+                font-size: 0.85rem;
+            }
+            
+            .function-box {
+                gap: 15px;
+            }
+            
+            .box {
+                padding: 25px 15px;
+            }
+            
+            .box-icon-wrapper {
+                width: 65px;
+                height: 65px;
+                margin-bottom: 15px;
+            }
+            
+            .box-icon {
+                font-size: 2rem;
+            }
+        }
+        
+        /* AI机器人助手 */
+        .ai-robot {
+            position: fixed;
+            right: 30px;
+            bottom: 30px;
+            width: 70px;
+            height: 70px;
+            z-index: 1000;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        
+        .robot-body {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0EA5E9 0%, #06B6D4 50%, #10B981 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            box-shadow: 
+                0 0 30px rgba(14, 165, 233, 0.6),
+                0 0 60px rgba(14, 165, 233, 0.3),
+                inset 0 2px 10px rgba(255, 255, 255, 0.3);
+            animation: robotFloat 3s ease-in-out infinite, robotPulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes robotFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+        
+        @keyframes robotPulse {
+            0%, 100% { box-shadow: 0 0 30px rgba(14, 165, 233, 0.6), 0 0 60px rgba(14, 165, 233, 0.3); }
+            50% { box-shadow: 0 0 40px rgba(14, 165, 233, 0.8), 0 0 80px rgba(14, 165, 233, 0.5); }
+        }
+        
+        .robot-face {
+            font-size: 32px;
+            color: white;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+            animation: robotWink 4s ease-in-out infinite;
+        }
+        
+        @keyframes robotWink {
+            0%, 90%, 100% { transform: scaleY(1); }
+            95% { transform: scaleY(0.1); }
+        }
+        
+        .robot-ring {
+            position: absolute;
+            width: 120%;
+            height: 120%;
+            border: 2px solid rgba(14, 165, 233, 0.4);
+            border-radius: 50%;
+            animation: ringExpand 2s ease-out infinite;
+        }
+        
+        .robot-ring:nth-child(2) {
+            animation-delay: 0.5s;
+        }
+        
+        @keyframes ringExpand {
+            0% { transform: scale(0.8); opacity: 1; }
+            100% { transform: scale(1.5); opacity: 0; }
+        }
+        
+        .robot-tooltip {
+            position: absolute;
+            bottom: 85px;
+            right: 0;
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid rgba(14, 165, 233, 0.5);
+            border-radius: 12px;
+            padding: 12px 16px;
+            min-width: 180px;
+            opacity: 1;
+            transform: translateY(0);
+            transition: all 0.3s ease;
+            pointer-events: none;
+            backdrop-filter: blur(10px);
+            animation: tooltipPulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes tooltipPulse {
+            0%, 100% { 
+                box-shadow: 0 0 10px rgba(14, 165, 233, 0.3);
+                border-color: rgba(14, 165, 233, 0.5);
+            }
+            50% { 
+                box-shadow: 0 0 20px rgba(14, 165, 233, 0.6);
+                border-color: rgba(14, 165, 233, 0.8);
+            }
+        }
+        
+        .robot-tooltip::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            right: 25px;
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-top: 8px solid rgba(14, 165, 233, 0.5);
+        }
+        
+        .robot-tooltip.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .robot-tooltip-text {
+            color: white;
+            font-size: 13px;
+            line-height: 1.4;
+            margin-bottom: 6px;
+        }
+        
+        .robot-tooltip-hint {
+            color: #0EA5E9;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .ai-robot:hover .robot-body {
+            transform: scale(1.1);
+            box-shadow: 
+                0 0 50px rgba(14, 165, 233, 0.8),
+                0 0 100px rgba(14, 165, 233, 0.5);
+        }
+        
+        .ai-robot:hover .robot-tooltip {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        /* 点击波纹效果 */
+        .robot-ripple {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: rgba(14, 165, 233, 0.4);
+            transform: scale(0);
+            opacity: 0;
+        }
+        
+        .robot-ripple.active {
+            animation: rippleEffect 0.6s ease-out;
+        }
+        
+        @keyframes rippleEffect {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="meteor-canvas"></canvas>
+    <div class="container">
+        <div class="header">
+            <h1>大模型镜片识别</h1>
+            <p>基于深度学习的智能瑕疵检测系统</p>
+        </div>
+        
+        <div class="function-box">
+            <a href="http://127.0.0.1:5002/select_fan">
+                <div class="box">
+                    <div class="box-icon-wrapper">
+                        <i class="fas fa-camera box-icon"></i>
+                    </div>
+                    <div class="box-content">
+                        <h3>识别瑕疵</h3>
+                        <p>上传图片进行智能检测</p>
+                    </div>
+                </div>
+            </a>
+            
+            <a href="/history">
+                <div class="box">
+                    <div class="box-icon-wrapper">
+                        <i class="fas fa-history box-icon"></i>
+                    </div>
+                    <div class="box-content">
+                        <h3>历史记录</h3>
+                        <p>查看检测历史数据</p>
+                    </div>
+                </div>
+            </a>
+            
+            <a href="/visualization">
+                <div class="box">
+                    <div class="box-icon-wrapper">
+                        <i class="fas fa-chart-pie box-icon"></i>
+                    </div>
+                    <div class="box-content">
+                        <h3>信息可视化</h3>
+                        <p>查看数据统计与分析</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+        
+        <button class="logout-btn" onclick="window.location.href='/login'">
+            <span>退出登录</span>
+        </button>
+    </div>
+    
+    <!-- AI机器人助手 -->
+    <div class="ai-robot" id="aiRobot" onclick="goToAI()">
+        <div class="robot-ring"></div>
+        <div class="robot-ring"></div>
+        <div class="robot-ripple" id="robotRipple"></div>
+        <div class="robot-body">
+            <i class="fas fa-robot robot-face"></i>
+        </div>
+        <div class="robot-tooltip" id="robotTooltip">
+            <div class="robot-tooltip-text">你好！我是AI助手</div>
+            <div class="robot-tooltip-hint">
+                <i class="fas fa-hand-pointer"></i>
+                <span>点击启动AI助手</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 流星雨粒子效果
+        class MeteorEffect {
+            constructor() {
+                this.canvas = document.getElementById('meteor-canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.meteors = [];
+                this.stars = [];
+                this.resize();
+                this.init();
+                this.animate();
+            }
+
+            resize() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+            }
+
+            init() {
+                // 创建背景星星
+                for (let i = 0; i < 150; i++) {
+                    this.stars.push({
+                        x: Math.random() * this.canvas.width,
+                        y: Math.random() * this.canvas.height,
+                        size: Math.random() * 2 + 0.5,
+                        opacity: Math.random() * 0.8 + 0.2,
+                        twinkle: Math.random() * Math.PI * 2,
+                        twinkleSpeed: Math.random() * 0.02 + 0.01
+                    });
+                }
+
+                // 每4秒创建一次流星雨
+                this.startMeteorShower();
+                setInterval(() => {
+                    this.startMeteorShower();
+                }, 4000);
+            }
+
+            startMeteorShower() {
+                // 创建一波流星雨（3-6颗流星）
+                const meteorCount = Math.floor(Math.random() * 4) + 3;
+                for (let i = 0; i < meteorCount; i++) {
+                    setTimeout(() => {
+                        this.createMeteor();
+                    }, i * 200);
+                }
+            }
+
+            createMeteor() {
+                const startX = Math.random() * this.canvas.width;
+                const length = Math.random() * 80 + 50;
+                const speed = Math.random() * 8 + 12;
+                
+                this.meteors.push({
+                    x: startX,
+                    y: -50,
+                    length: length,
+                    speed: speed,
+                    angle: Math.PI / 4 + (Math.random() - 0.5) * 0.3,
+                    thickness: Math.random() * 2 + 1,
+                    opacity: 1,
+                    trail: []
+                });
+            }
+
+            updateStars() {
+                this.stars.forEach(star => {
+                    star.twinkle += star.twinkleSpeed;
+                    star.opacity = 0.3 + Math.sin(star.twinkle) * 0.3;
+                });
+            }
+
+            updateMeteors() {
+                this.meteors = this.meteors.filter(meteor => {
+                    // 保存轨迹点
+                    meteor.trail.push({ x: meteor.x, y: meteor.y, opacity: meteor.opacity });
+                    
+                    // 限制轨迹长度
+                    if (meteor.trail.length > 15) {
+                        meteor.trail.shift();
+                    }
+
+                    // 更新位置
+                    meteor.x += Math.cos(meteor.angle) * meteor.speed;
+                    meteor.y += Math.sin(meteor.angle) * meteor.speed;
+
+                    // 更新透明度
+                    meteor.opacity -= 0.008;
+
+                    return meteor.y < this.canvas.height + 100 && meteor.opacity > 0;
+                });
+            }
+
+            drawStars() {
+                this.stars.forEach(star => {
+                    this.ctx.beginPath();
+                    this.ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                    this.ctx.fillStyle = `rgba(255, 255, 255, ${star.opacity})`;
+                    this.ctx.fill();
+
+                    // 添加光晕效果
+                    this.ctx.beginPath();
+                    this.ctx.arc(star.x, star.y, star.size * 2, 0, Math.PI * 2);
+                    this.ctx.fillStyle = `rgba(14, 165, 233, ${star.opacity * 0.3})`;
+                    this.ctx.fill();
+                });
+            }
+
+            drawMeteors() {
+                this.meteors.forEach(meteor => {
+                    // 绘制轨迹
+                    meteor.trail.forEach((point, index) => {
+                        const trailOpacity = (index / meteor.trail.length) * meteor.opacity * 0.6;
+                        this.ctx.beginPath();
+                        this.ctx.arc(point.x, point.y, meteor.thickness * (index / meteor.trail.length), 0, Math.PI * 2);
+                        this.ctx.fillStyle = `rgba(14, 165, 233, ${trailOpacity})`;
+                        this.ctx.fill();
+                    });
+
+                    // 绘制流星主体
+                    const gradient = this.ctx.createLinearGradient(
+                        meteor.x, meteor.y,
+                        meteor.x - Math.cos(meteor.angle) * meteor.length,
+                        meteor.y - Math.sin(meteor.angle) * meteor.length
+                    );
+                    gradient.addColorStop(0, `rgba(255, 255, 255, ${meteor.opacity})`);
+                    gradient.addColorStop(0.3, `rgba(14, 165, 233, ${meteor.opacity})`);
+                    gradient.addColorStop(1, `rgba(6, 182, 212, 0)`);
+
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(meteor.x, meteor.y);
+                    this.ctx.lineTo(
+                        meteor.x - Math.cos(meteor.angle) * meteor.length,
+                        meteor.y - Math.sin(meteor.angle) * meteor.length
+                    );
+                    this.ctx.strokeStyle = gradient;
+                    this.ctx.lineWidth = meteor.thickness;
+                    this.ctx.lineCap = 'round';
+                    this.ctx.stroke();
+
+                    // 添加发光效果
+                    this.ctx.shadowBlur = 20;
+                    this.ctx.shadowColor = 'rgba(14, 165, 233, 0.8)';
+                    this.ctx.beginPath();
+                    this.ctx.arc(meteor.x, meteor.y, meteor.thickness * 2, 0, Math.PI * 2);
+                    this.ctx.fillStyle = `rgba(255, 255, 255, ${meteor.opacity})`;
+                    this.ctx.fill();
+                    this.ctx.shadowBlur = 0;
+                });
+            }
+
+            animate() {
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+                this.updateStars();
+                this.updateMeteors();
+                this.drawStars();
+                this.drawMeteors();
+
+                requestAnimationFrame(() => this.animate());
+            }
+        }
+
+        // 初始化流星雨效果
+        document.addEventListener('DOMContentLoaded', () => {
+            new MeteorEffect();
+            
+            // 响应窗口大小变化
+            window.addEventListener('resize', () => {
+                location.reload();
+            });
+            
+
+        });
+        
+        // 跳转到AI助手页面
+        function goToAI() {
+            const ripple = document.getElementById('robotRipple');
+            ripple.classList.add('active');
+            
+            setTimeout(() => {
+                window.location.href = 'http://localhost:5002/visualization';
+            }, 400);
+        }
+    </script>
+</body>
+</html>

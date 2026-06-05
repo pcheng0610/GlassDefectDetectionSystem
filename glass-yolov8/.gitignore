@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local secrets
+.env
+.env.*
+!.env.example
+
+# Node/Electron dependencies and builds
+node_modules/
+dist/
+build/
+out/
+
+# Runtime data and generated inference outputs
+pythonWeb/static/data/local_cache/
+pythonWeb/static/data/online_cache/
+pythonWeb/static/data/result/
+pythonWeb/static/data/uploads/
+pythonWeb/static/data/tmp/
+pythonWeb/static/data/root/
+runs/
+
+# Large/generated binaries and model artifacts
+*.pt
+*.pth
+*.onnx
+*.engine
+*.zip
+*.exe
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

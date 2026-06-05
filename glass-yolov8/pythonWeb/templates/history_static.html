@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>历史记录 - 玻璃缺陷检测系统</title>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 12px;
+            padding: 20px 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .header .actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .card-header {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-header h2 {
+            font-size: 16px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #666;
+            font-size: 13px;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .image-preview {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        .image-preview:hover {
+            transform: scale(1.1);
+        }
+
+        .result-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .result-defect {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+
+        .result-normal {
+            background: #f0fdf4;
+            color: #16a34a;
+        }
+
+        .checkbox {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            padding: 20px;
+        }
+
+        .pagination button {
+            padding: 8px 16px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .pagination button:hover:not(:disabled) {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination span {
+            padding: 8px 16px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .modal-content h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .modal-content p {
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .image-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.9);
+            justify-content: center;
+            align-items: center;
+            z-index: 1001;
+            cursor: pointer;
+        }
+
+        .image-modal.active {
+            display: flex;
+        }
+
+        .image-modal img {
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: 8px;
+        }
+
+        .select-all {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .count-info {
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-history"></i> 检测历史记录</h1>
+            <div class="actions">
+                <button class="btn btn-secondary" onclick="goHome()">
+                    <i class="fas fa-home"></i> 返回主页
+                </button>
+                <button class="btn btn-danger" onclick="showClearModal()">
+                    <i class="fas fa-trash"></i> 一键清空
+                </button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div style="display: flex; align-items: center; gap: 20px;">
+                    <h2>检测记录列表</h2>
+                    <span class="count-info" id="totalCount">共 3 条记录</span>
+                </div>
+                <button class="btn btn-sm btn-danger" id="batchDeleteBtn" style="display: none;" onclick="batchDelete()">
+                    <i class="fas fa-trash"></i> 批量删除 (0)
+                </button>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" class="checkbox select-all" onclick="toggleSelectAll()"></th>
+                            <th>图片预览</th>
+                            <th>检测结果</th>
+                            <th>检测时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr data-id="1">
+                            <td><input type="checkbox" class="checkbox" value="1" onclick="toggleSelect(1)"></td>
+                            <td><img src="https://picsum.photos/100/100?random=1" class="image-preview" onclick="showImage('https://picsum.photos/400/300?random=1')"></td>
+                            <td><span class="result-badge result-defect">瑕疵</span></td>
+                            <td>2026-04-13 14:30:25</td>
+                            <td><button class="btn btn-sm btn-danger" onclick="showDeleteModal(1)">删除</button></td>
+                        </tr>
+                        <tr data-id="2">
+                            <td><input type="checkbox" class="checkbox" value="2" onclick="toggleSelect(2)"></td>
+                            <td><img src="https://picsum.photos/100/100?random=2" class="image-preview" onclick="showImage('https://picsum.photos/400/300?random=2')"></td>
+                            <td><span class="result-badge result-normal">正常</span></td>
+                            <td>2026-04-13 14:25:18</td>
+                            <td><button class="btn btn-sm btn-danger" onclick="showDeleteModal(2)">删除</button></td>
+                        </tr>
+                        <tr data-id="3">
+                            <td><input type="checkbox" class="checkbox" value="3" onclick="toggleSelect(3)"></td>
+                            <td><img src="https://picsum.photos/100/100?random=3" class="image-preview" onclick="showImage('https://picsum.photos/400/300?random=3')"></td>
+                            <td><span class="result-badge result-defect">瑕疵</span></td>
+                            <td>2026-04-13 14:20:45</td>
+                            <td><button class="btn btn-sm btn-danger" onclick="showDeleteModal(3)">删除</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="pagination" id="pagination">
+                <button id="prevBtn" disabled>上一页</button>
+                <span id="pageInfo">第 1 页 / 共 1 页</span>
+                <button id="nextBtn" disabled>下一页</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="confirmModal">
+        <div class="modal-content">
+            <h3><i class="fas fa-exclamation-triangle" style="color: #f59e0b;"></i></h3>
+            <h3>确认删除</h3>
+            <p id="modalMessage">确定要删除这条记录吗？</p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="hideModal()">取消</button>
+                <button class="btn btn-danger" id="confirmBtn" onclick="confirmDelete()">确认删除</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="clearModal">
+        <div class="modal-content">
+            <h3><i class="fas fa-trash" style="color: #dc3545;"></i></h3>
+            <h3>清空全部记录</h3>
+            <p>确定要清空所有检测历史记录吗？此操作不可恢复！</p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="hideClearModal()">取消</button>
+                <button class="btn btn-danger" onclick="confirmClear()">确认清空</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="image-modal" id="imageModal" onclick="hideImageModal()">
+        <img id="previewImage" src="">
+    </div>
+
+    <script>
+        var currentPage = 1;
+        var totalPages = 1;
+        var totalRecords = 3;
+        var deleteId = null;
+        var selectedIds = [];
+
+        function renderTable() {
+            // 静态数据，不需要从API获取
+        }
+
+        function updatePagination() {
+            document.getElementById('pageInfo').textContent = `第 ${currentPage} 页 / 共 ${totalPages} 页`;
+            document.getElementById('prevBtn').disabled = currentPage <= 1;
+            document.getElementById('nextBtn').disabled = currentPage >= totalPages;
+        }
+
+        function updateCount() {
+            document.getElementById('totalCount').textContent = `共 ${totalRecords} 条记录`;
+        }
+
+        function updateBatchBtn() {
+            var btn = document.getElementById('batchDeleteBtn');
+            if (selectedIds.length > 0) {
+                btn.style.display = 'block';
+                btn.innerHTML = `<i class="fas fa-trash"></i> 批量删除 (${selectedIds.length})`;
+            } else {
+                btn.style.display = 'none';
+            }
+        }
+
+        function toggleSelectAll() {
+            var checked = document.querySelector('.select-all').checked;
+            var checkboxes = document.querySelectorAll('.checkbox:not(.select-all)');
+            selectedIds = [];
+            checkboxes.forEach(function(checkbox) {
+                checkbox.checked = checked;
+                if (checked) {
+                    selectedIds.push(parseInt(checkbox.value));
+                }
+            });
+            updateBatchBtn();
+        }
+
+        function toggleSelect(id) {
+            var index = selectedIds.indexOf(id);
+            if (index === -1) {
+                selectedIds.push(id);
+            } else {
+                selectedIds.splice(index, 1);
+            }
+            updateBatchBtn();
+        }
+
+        function showDeleteModal(id) {
+            deleteId = id;
+            document.getElementById('modalMessage').textContent = '确定要删除这条记录吗？';
+            document.getElementById('confirmModal').classList.add('active');
+        }
+
+        function hideModal() {
+            document.getElementById('confirmModal').classList.remove('active');
+            deleteId = null;
+        }
+
+        function confirmDelete() {
+            if (selectedIds.length > 0) {
+                alert(`成功删除 ${selectedIds.length} 条记录`);
+                selectedIds.forEach(function(id) {
+                    var row = document.querySelector(`tr[data-id="${id}"]`);
+                    if (row) {
+                        row.remove();
+                    }
+                });
+                totalRecords -= selectedIds.length;
+                selectedIds = [];
+            } else if (deleteId) {
+                var row = document.querySelector(`tr[data-id="${deleteId}"]`);
+                if (row) {
+                    row.remove();
+                    totalRecords--;
+                }
+                alert('删除成功');
+            }
+            updateCount();
+            updateBatchBtn();
+            hideModal();
+        }
+
+        function showClearModal() {
+            document.getElementById('clearModal').classList.add('active');
+        }
+
+        function hideClearModal() {
+            document.getElementById('clearModal').classList.remove('active');
+        }
+
+        function confirmClear() {
+            var tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '<tr><td colspan="5" class="empty-state"><i class="fas fa-history"></i><p>暂无检测记录</p></td></tr>';
+            totalRecords = 0;
+            selectedIds = [];
+            updateCount();
+            updateBatchBtn();
+            alert('清空成功');
+            hideClearModal();
+        }
+
+        function batchDelete() {
+            if (selectedIds.length === 0) return;
+            document.getElementById('modalMessage').textContent = `确定要删除选中的 ${selectedIds.length} 条记录吗？`;
+            document.getElementById('confirmModal').classList.add('active');
+        }
+
+        function showImage(url) {
+            document.getElementById('previewImage').src = url;
+            document.getElementById('imageModal').classList.add('active');
+        }
+
+        function hideImageModal() {
+            document.getElementById('imageModal').classList.remove('active');
+        }
+
+        function goHome() {
+            window.location.href = '/home';
+        }
+
+        document.getElementById('prevBtn').addEventListener('click', function() {
+            if (currentPage > 1) {
+                currentPage--;
+                updatePagination();
+            }
+        });
+
+        document.getElementById('nextBtn').addEventListener('click', function() {
+            if (currentPage < totalPages) {
+                currentPage++;
+                updatePagination();
+            }
+        });
+
+        // 初始化
+        updatePagination();
+        updateCount();
+    </script>
+</body>
+</html>

@@ -1,0 +1,2515 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>在线图像识别系统</title>
+    <style>
+        :root {
+            --primary: #00a8ff;
+            --secondary: #00d4ff;
+            --accent: #0096ff;
+            --dark: #000000;
+            --darker: #1a1a1a;
+            --light: #ffffff;
+            --card-bg: rgba(30, 30, 30, 0.85);
+            --card-border: rgba(0, 168, 255, 0.35);
+            --glow: 0 0 20px rgba(0, 168, 255, 0.4);
+            --text-primary: #ffffff;
+            --text-secondary: #b0b0b0;
+            --success-color: #00d4ff;
+            --warning-color: #f39c12;
+            --error-color: #ff6b6b;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            font-family: 'Segoe UI', 'Roboto', sans-serif;
+            background: #000000;
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000000;
+            z-index: -1;
+        }
+        
+        .header {
+            background: rgba(30, 30, 30, 0.9);
+            backdrop-filter: blur(20px);
+            padding: 1.2rem 2rem;
+            text-align: center;
+            border-bottom: 2px solid var(--card-border);
+            box-shadow: 0 2px 15px rgba(0, 168, 255, 0.2);
+            position: relative;
+            z-index: 10;
+            width: 100%;
+        }
+        
+        
+        .header h1 {
+            font-size: 2.2rem;
+            font-weight: 300;
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin: 0;
+            letter-spacing: 1px;
+            text-shadow: 0 0 20px rgba(10, 132, 255, 0.3);
+        }
+        
+        .header .subtitle {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin-top: 0.8rem;
+            font-weight: 300;
+        }
+        
+        .status-bar {
+            background: linear-gradient(135deg, rgba(30, 30, 30, 0.95), rgba(0, 168, 255, 0.08));
+            backdrop-filter: blur(20px);
+            padding: 1rem 2rem;
+            text-align: center;
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            border-bottom: 2px solid var(--card-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            z-index: 10;
+            box-shadow: 0 2px 10px rgba(0, 168, 255, 0.25);
+        }
+        
+        .status-bar.connected {
+            color: var(--success-color);
+            text-shadow: 0 0 12px rgba(46, 204, 113, 0.6);
+            border-bottom-color: var(--success-color);
+        }
+        
+        .status-bar.error {
+            color: var(--error-color);
+            text-shadow: 0 0 12px rgba(231, 76, 60, 0.6);
+            border-bottom-color: var(--error-color);
+        }
+        
+        .status-bar.success {
+            color: var(--success-color);
+            text-shadow: 0 0 12px rgba(46, 204, 113, 0.6);
+            border-bottom-color: var(--success-color);
+        }
+        
+        .main-container {
+            display: flex;
+            flex: 1;
+            padding: 1rem 2rem;
+            gap: 1.5rem;
+            position: relative;
+            z-index: 10;
+            min-height: calc(100vh - 160px);
+            max-height: calc(100vh - 160px);
+            overflow: hidden;
+            align-items: stretch;
+            max-width: 100%;
+            width: 100%;
+        }
+        
+        .sidebar {
+            width: 240px;
+            min-width: 240px;
+            flex-shrink: 0;
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+            border: 1px solid var(--card-border);
+            box-shadow: var(--glow);
+            position: relative;
+            height: 599px;
+            max-height: 599px;
+            align-self: flex-start;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary) rgba(0, 0, 0, 0.3);
+        }
+        
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .sidebar::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 3px;
+        }
+        
+        .sidebar::-webkit-scrollbar-thumb {
+            background: linear-gradient(to bottom, var(--primary), var(--secondary));
+            border-radius: 3px;
+        }
+        
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(to bottom, #0070e6, #4e4dcc);
+        }
+        
+        .sidebar-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            background: linear-gradient(to right, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 0.5rem;
+            text-align: center;
+            padding-bottom: 0.8rem;
+            border-bottom: 1px solid var(--card-border);
+        }
+        
+        .sidebar button {
+            background: linear-gradient(135deg, rgba(50, 50, 50, 0.9), rgba(0, 168, 255, 0.05));
+            color: var(--text-primary);
+            border: 2px solid var(--card-border);
+            padding: 0.9rem 1.2rem;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            font-size: 0.9rem;
+            font-weight: 500;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 8px rgba(0, 168, 255, 0.2);
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        
+        .sidebar button:hover:not(:disabled) {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0, 168, 255, 0.4);
+            border-color: var(--primary);
+        }
+        
+        .sidebar button:active:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(10, 132, 255, 0.3);
+        }
+        
+        .sidebar button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            background: rgba(50, 50, 50, 0.5);
+        }
+        
+        .sidebar button.primary {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(10, 132, 255, 0.3);
+        }
+        
+        .sidebar button.primary:hover:not(:disabled) {
+            background: linear-gradient(135deg, #0070e6, #4e4dcc);
+            box-shadow: 0 6px 20px rgba(10, 132, 255, 0.5);
+        }
+        
+        .sidebar button.danger {
+            background: linear-gradient(135deg, var(--error-color), #c0392b);
+            color: white;
+        }
+        
+        .sidebar button.danger:hover:not(:disabled) {
+            background: linear-gradient(135deg, #c0392b, #a93226);
+        }
+        
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 1.2rem;
+            overflow: hidden;
+            height: 100%;
+            min-width: 0;
+        }
+        
+        .image-section {
+            display: flex;
+            gap: 1.5rem;
+            height: 280px;
+            min-height: 280px;
+            max-height: 280px;
+            flex: 0 0 auto;
+        }
+        
+        .image-box {
+            flex: 1;
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            padding: 1.2rem;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--card-border);
+            box-shadow: var(--glow);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .image-box h3 {
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+            font-size: 1rem;
+            font-weight: 600;
+            background: linear-gradient(to right, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .image-box h3::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            background: linear-gradient(to bottom, var(--primary), var(--accent));
+            border-radius: 2px;
+        }
+        
+        .image-container {
+            flex: 1;
+            background: linear-gradient(135deg, rgba(50, 50, 50, 0.6), rgba(0, 168, 255, 0.08));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid var(--card-border);
+            box-shadow: inset 0 2px 10px rgba(0, 168, 255, 0.2);
+        }
+        
+        .image-container img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .image-container img:hover {
+            transform: scale(1.03);
+            box-shadow: 0 8px 30px rgba(0, 168, 255, 0.4);
+            border-color: var(--primary);
+        }
+        
+        .image-container::after {
+            content: '🔍 点击放大';
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        
+        .image-container:hover::after {
+            opacity: 1;
+        }
+        
+        .image-placeholder {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            text-align: center;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.8rem;
+        }
+        
+        .image-placeholder::before {
+            content: '📷';
+            font-size: 3rem;
+            opacity: 0.3;
+            animation: pulse 2s infinite;
+        }
+        
+        .loading {
+            color: var(--primary);
+            font-size: 1rem;
+            text-align: center;
+            font-weight: 500;
+            text-shadow: 0 0 10px rgba(10, 132, 255, 0.5);
+        }
+        
+        .results-section {
+            display: flex;
+            gap: 1.5rem;
+            height: 300px;
+            min-height: 300px;
+            max-height: 300px;
+            flex: 0 0 auto;
+            overflow: hidden;
+        }
+        
+        .result-box {
+            flex: 1;
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            padding: 1.2rem;
+            border: 1px solid var(--card-border);
+            box-shadow: var(--glow);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .result-box h3 {
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+            font-size: 1rem;
+            font-weight: 600;
+            background: linear-gradient(to right, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .result-box h3::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            background: linear-gradient(to bottom, var(--primary), var(--accent));
+            border-radius: 2px;
+        }
+        
+        .result-content {
+            background: rgba(0, 168, 255, 0.05);
+            border-radius: 12px;
+            height: calc(100% - 2rem);
+            padding: 1rem;
+            color: var(--text-primary);
+            overflow-y: auto;
+            position: relative;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            border: 1px solid var(--card-border);
+        }
+        
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.8rem;
+            border-bottom: 1px solid var(--card-border);
+        }
+        
+        .result-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+        
+        .result-controls button {
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            box-shadow: 0 2px 8px rgba(10, 132, 255, 0.3);
+        }
+        
+        .result-controls button:hover {
+            background: linear-gradient(135deg, #0070e6, #4e4dcc);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(10, 132, 255, 0.4);
+        }
+        
+        .results-grid {
+            display: flex;
+            gap: 1.2rem;
+            flex: 1;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 1.2rem;
+            background: linear-gradient(135deg, rgba(50, 50, 50, 0.6), rgba(0, 168, 255, 0.08));
+            border-radius: 12px;
+            border: 2px solid var(--card-border);
+            scroll-behavior: smooth;
+            box-shadow: inset 0 2px 10px rgba(0, 168, 255, 0.2);
+            align-items: center;
+        }
+        
+        .results-grid::-webkit-scrollbar {
+            height: 8px;
+        }
+        
+        .results-grid::-webkit-scrollbar-track {
+            background: rgba(0, 168, 255, 0.1);
+            border-radius: 4px;
+        }
+        
+        .results-grid::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 4px;
+        }
+        
+        .results-grid::-webkit-scrollbar-thumb:hover {
+            background: #0070e6;
+        }
+        
+        .result-item {
+            position: relative;
+            background: var(--card-bg);
+            border: 2px solid var(--card-border);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            flex-shrink: 0;
+            width: 200px;
+            min-height: 160px;
+            max-height: 200px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .result-item:hover {
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 8px 20px rgba(0, 168, 255, 0.4);
+            border-color: var(--primary);
+        }
+        
+        .result-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .result-item-info {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.9));
+            color: white;
+            padding: 0.8rem;
+            font-size: 0.75rem;
+            backdrop-filter: blur(5px);
+        }
+        
+        .result-item-class {
+            font-weight: bold;
+            font-size: 0.85rem;
+            margin-bottom: 0.3rem;
+            color: var(--primary);
+            text-shadow: 0 0 8px rgba(10, 132, 255, 0.5);
+        }
+        
+        .result-item-confidence {
+            opacity: 0.9;
+            font-size: 0.75rem;
+            color: var(--success-color);
+        }
+        
+        .result-item-time {
+            font-size: 0.65rem;
+            opacity: 0.7;
+            margin-top: 0.3rem;
+            color: var(--text-secondary);
+        }
+        
+        .results-container {
+            position: relative;
+            height: calc(100% - 4rem);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .scroll-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: 2px solid rgba(0, 168, 255, 0.3);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+        }
+        
+        .scroll-btn:hover {
+            background: linear-gradient(135deg, #0070e6, #4e4dcc);
+            transform: translateY(-50%) scale(1.15);
+            box-shadow: 0 6px 16px rgba(10, 132, 255, 0.5);
+        }
+        
+        .scroll-btn:active {
+            transform: translateY(-50%) scale(1.05);
+        }
+        
+        .scroll-btn:disabled {
+            background: linear-gradient(135deg, var(--text-secondary), #666);
+            cursor: not-allowed;
+            transform: translateY(-50%);
+            opacity: 0.3;
+        }
+        
+        .scroll-left {
+            left: 8px;
+        }
+        
+        .scroll-right {
+            right: 8px;
+        }
+        
+        /* 瑕疵统计区域样式 */
+        .defect-stats {
+            margin-top: 1rem;
+            background: linear-gradient(135deg, rgba(50, 50, 50, 0.6), rgba(0, 168, 255, 0.08));
+            border-radius: 12px;
+            padding: 1rem;
+            border: 1px solid var(--card-border);
+            min-height: 60px;
+            box-shadow: inset 0 2px 8px rgba(0, 168, 255, 0.2);
+        }
+        
+        .stats-header {
+            margin-bottom: 0.8rem;
+        }
+        
+        .stats-header h4 {
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin: 0;
+            background: linear-gradient(to right, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .stats-content {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+        }
+        
+        .most-common-defect {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.6rem 1rem;
+            background: linear-gradient(135deg, rgba(50, 50, 50, 0.8), rgba(0, 168, 255, 0.12));
+            border-radius: 8px;
+            border: 1px solid var(--card-border);
+            white-space: nowrap;
+            box-shadow: 0 2px 8px rgba(0, 168, 255, 0.25);
+        }
+        
+        .stats-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        
+        .defect-name {
+            font-size: 0.85rem;
+            color: var(--primary);
+            font-weight: bold;
+            text-shadow: 0 0 8px rgba(10, 132, 255, 0.4);
+        }
+        
+        .defect-count {
+            font-size: 0.75rem;
+            color: white;
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--accent), #9945d9);
+            padding: 0.3rem 0.6rem;
+            border-radius: 6px;
+            box-shadow: 0 2px 6px rgba(191, 90, 242, 0.3);
+        }
+        
+        .defect-breakdown {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.3rem;
+            align-items: center;
+        }
+        
+        .defect-item {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.4rem 0.6rem;
+            background: linear-gradient(135deg, rgba(50, 50, 50, 0.7), rgba(0, 168, 255, 0.08));
+            border-radius: 6px;
+            font-size: 0.75rem;
+            border: 1px solid var(--card-border);
+            white-space: nowrap;
+            transition: all 0.3s ease;
+        }
+        
+        .defect-item:hover {
+            background: linear-gradient(135deg, rgba(0, 168, 255, 0.15), rgba(0, 212, 255, 0.12));
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 168, 255, 0.2);
+        }
+        
+        .defect-item-name {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+        
+        .defect-item-count {
+            color: var(--primary);
+            font-weight: bold;
+            text-shadow: 0 0 6px rgba(10, 132, 255, 0.3);
+        }
+        
+        .defect-item-bar {
+            width: 20px;
+            height: 4px;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            border-radius: 2px;
+            opacity: 0.9;
+            box-shadow: 0 0 6px rgba(0, 168, 255, 0.4);
+        }
+        
+        .result-item strong {
+            color: var(--primary);
+            text-shadow: 0 0 10px rgba(0, 168, 255, 0.5);
+        }
+        
+        .confidence-high {
+            color: var(--success-color);
+            text-shadow: 0 0 10px rgba(46, 204, 113, 0.5);
+        }
+        
+        .confidence-medium {
+            color: var(--warning-color);
+            text-shadow: 0 0 10px rgba(243, 156, 18, 0.5);
+        }
+        
+        .confidence-low {
+            color: var(--error-color);
+            text-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
+        }
+        
+        .scroll-hint {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            color: var(--primary);
+            font-size: 0.8rem;
+            animation: pulse 2s infinite;
+            text-shadow: 0 0 10px rgba(0, 168, 255, 0.5);
+        }
+        
+        @keyframes pulse {
+            0% { 
+                opacity: 0.5;
+                transform: scale(1);
+            }
+            50% { 
+                opacity: 1;
+                transform: scale(1.05);
+                box-shadow: 0 0 20px rgba(231, 76, 60, 0.6);
+            }
+            100% { 
+                opacity: 0.5;
+                transform: scale(1);
+            }
+        }
+        
+        
+        .message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 12px;
+            color: #ffffff;
+            font-weight: 500;
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 8px 25px rgba(0, 168, 255, 0.3);
+            border: 1px solid rgba(0, 168, 255, 0.3);
+        }
+        
+        .message.success {
+            background: linear-gradient(135deg, #00d4ff, #00a8ff);
+        }
+        
+        .message.error {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+        }
+        
+        .message.info {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+        }
+        
+        .processing-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 168, 255, 0.2);
+            backdrop-filter: blur(15px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            color: var(--text-primary);
+        }
+        
+        .processing-content {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            padding: 3rem;
+            border-radius: 20px;
+            text-align: center;
+            border: 1px solid var(--card-border);
+            box-shadow: var(--glow);
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid var(--card-border);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1.5rem;
+            box-shadow: 0 0 20px rgba(10, 132, 255, 0.3);
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        /* 简化的科技感装饰元素 */
+        .tech-decoration {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        .tech-circle {
+            position: absolute;
+            border-radius: 50%;
+            background: linear-gradient(var(--primary), var(--secondary));
+            opacity: 0.08;
+            box-shadow: 0 0 25px rgba(0, 168, 255, 0.3);
+        }
+        
+        .tech-circle:nth-child(1) {
+            width: 200px;
+            height: 200px;
+            top: -100px;
+            left: -100px;
+        }
+        
+        .tech-circle:nth-child(2) {
+            width: 150px;
+            height: 150px;
+            bottom: -75px;
+            right: -75px;
+        }
+        
+        .tech-line {
+            position: absolute;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            height: 1px;
+            opacity: 0.3;
+        }
+        
+        .tech-line:nth-child(3) {
+            top: 30%;
+            width: 60%;
+            left: 20%;
+        }
+        
+        .tech-line:nth-child(4) {
+            top: 70%;
+            width: 40%;
+            left: 30%;
+        }
+        
+        /* 图片放大模态框样式 */
+        .image-modal {
+            display: none;
+            position: fixed;
+            z-index: 3000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 168, 255, 0.25);
+            backdrop-filter: blur(15px);
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .image-modal.show {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            position: relative;
+            max-width: 90%;
+            max-height: 90%;
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 1rem;
+            box-shadow: var(--glow);
+            border: 1px solid var(--card-border);
+            animation: scaleIn 0.3s ease;
+        }
+        
+        .modal-image {
+            max-width: 100%;
+            max-height: 80vh;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+        
+        .modal-close {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background: var(--error-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
+            transition: all 0.3s ease;
+        }
+        
+        .modal-close:hover {
+            background: #c0392b;
+            transform: scale(1.1);
+        }
+        
+        .modal-info {
+            margin-top: 1rem;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        /* 本地缓存相关样式 */
+        .cache-section {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border: 1px solid var(--card-border);
+            box-shadow: var(--glow);
+        }
+        
+        .cache-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .cache-stats {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .stat-item {
+            background: rgba(0, 168, 255, 0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            text-align: center;
+            min-width: 60px;
+            border: 1px solid rgba(0, 168, 255, 0.2);
+        }
+        
+        .stat-number {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        
+        .cache-controls {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .cache-controls button {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            background: var(--card-bg);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.8rem;
+        }
+        
+        .cache-controls button:hover:not(:disabled) {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+        
+        .cache-controls button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .cache-images {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 0.5rem;
+            background: rgba(0, 168, 255, 0.05);
+            border-radius: 8px;
+            border: 1px solid rgba(0, 168, 255, 0.15);
+        }
+        
+        .cache-image-item {
+            position: relative;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .cache-image-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 168, 255, 0.25);
+        }
+        
+        .cache-image-item.selected {
+            border-color: var(--primary);
+            box-shadow: 0 0 10px rgba(0, 168, 255, 0.5);
+        }
+        
+        .cache-image-preview {
+            width: 100%;
+            height: 80px;
+            object-fit: cover;
+        }
+        
+        .cache-image-info {
+            padding: 0.5rem;
+        }
+        
+        .cache-image-name {
+            font-size: 0.7rem;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .cache-image-status {
+            font-size: 0.6rem;
+            padding: 2px 4px;
+            border-radius: 3px;
+            display: inline-block;
+            margin-top: 2px;
+        }
+        
+        .status-cached {
+            background: rgba(52, 152, 219, 0.2);
+            color: #3498db;
+        }
+        
+        .status-processing {
+            background: rgba(241, 196, 15, 0.2);
+            color: #f1c40f;
+        }
+        
+        .status-completed {
+            background: rgba(46, 204, 113, 0.2);
+            color: #2ecc71;
+        }
+        
+        .status-error {
+            background: rgba(231, 76, 60, 0.2);
+            color: #e74c3c;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes scaleIn {
+            from { 
+                transform: scale(0.8);
+                opacity: 0;
+            }
+            to { 
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        
+        /* 大屏幕优化 - 移除宽度限制，让内容铺满 */
+        @media (min-width: 1400px) {
+            .main-container {
+                padding: 1.5rem 4rem;
+                gap: 2rem;
+            }
+            
+            .image-section, .results-section {
+                gap: 2.5rem;
+            }
+            
+            .sidebar {
+                width: 260px;
+                min-width: 260px;
+            }
+            
+            .result-item {
+                width: 220px;
+            }
+        }
+        
+        /* 超大屏幕优化 */
+        @media (min-width: 1920px) {
+            .main-container {
+                padding: 2rem 6rem;
+                gap: 2.5rem;
+            }
+            
+            .image-section, .results-section {
+                gap: 3rem;
+            }
+            
+            .sidebar {
+                width: 280px;
+                min-width: 280px;
+            }
+            
+            .result-item {
+                width: 240px;
+            }
+        }
+        
+        /* 中等屏幕适配 */
+        @media (max-width: 1200px) {
+            .main-container {
+                padding: 0.8rem;
+                gap: 0.8rem;
+            }
+            
+            .sidebar {
+                width: 160px;
+                padding: 0.8rem;
+            }
+            
+            .sidebar button {
+                padding: 0.5rem 0.6rem;
+                font-size: 0.75rem;
+                min-height: 32px;
+            }
+        }
+        
+        /* 平板适配 */
+        @media (max-width: 992px) {
+            .main-container {
+                padding: 0.6rem;
+                gap: 0.6rem;
+            }
+            
+            .sidebar {
+                width: 140px;
+                padding: 0.6rem;
+            }
+            
+            .image-section {
+                min-height: 180px;
+                max-height: 250px;
+            }
+            
+            .results-section {
+                min-height: 160px;
+                max-height: 220px;
+            }
+        }
+        
+        /* 手机适配 */
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+                padding: 0.5rem;
+                gap: 0.5rem;
+                min-height: calc(100vh - 140px);
+                max-height: calc(100vh - 140px);
+            }
+            
+            .sidebar {
+                width: 100%;
+                flex-direction: row;
+                flex-wrap: wrap;
+                gap: 0.4rem;
+                padding: 0.5rem;
+            }
+            
+            .sidebar button {
+                flex: 1;
+                min-width: 100px;
+                font-size: 0.7rem;
+                padding: 0.4rem 0.5rem;
+                min-height: 28px;
+            }
+            
+            .image-section {
+                flex-direction: column;
+                height: auto;
+                min-height: 150px;
+                max-height: 200px;
+            }
+            
+            .results-section {
+                height: auto;
+                min-height: 150px;
+                max-height: 200px;
+            }
+            
+            .image-box, .result-box {
+                padding: 0.6rem;
+            }
+            
+            .image-box h3, .result-box h3 {
+                font-size: 0.8rem;
+                margin-bottom: 0.5rem;
+            }
+            
+            .modal-content {
+                max-width: 95%;
+                padding: 0.5rem;
+            }
+            
+            .modal-image {
+                max-height: 70vh;
+            }
+        }
+        
+        /* 小屏幕手机适配 */
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .header .subtitle {
+                font-size: 0.9rem;
+            }
+            
+            .status-bar {
+                padding: 0.8rem 1rem;
+                font-size: 0.8rem;
+            }
+            
+            .sidebar button {
+                min-width: 80px;
+                font-size: 0.65rem;
+                padding: 0.3rem 0.4rem;
+                min-height: 24px;
+            }
+            
+            .image-section, .results-section {
+                min-height: 120px;
+                max-height: 160px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 简化的科技装饰元素 -->
+    <div class="tech-decoration">
+        <div class="tech-circle"></div>
+        <div class="tech-circle"></div>
+        <div class="tech-line"></div>
+        <div class="tech-line"></div>
+    </div>
+    
+    <header class="header">
+        <h1>镜片瑕疵识别系统</h1>
+        <div class="subtitle">AI驱动的实时图像识别与缺陷检测</div>
+    </header>
+    
+        <div class="status-bar" id="statusBar">
+            <span id="statusText">检查相机状态中...</span>
+            <span id="shortcuts" style="font-size: 0.8rem; opacity: 0.7;">
+
+            </span>
+        </div>
+    
+    <div class="main-container">
+        <aside class="sidebar">
+            <div class="sidebar-title">🎮 操作面板</div>
+            
+            <!-- 相机控制 -->
+            <div style="margin-top: 0.5rem; font-size: 0.75rem; color: var(--text-secondary); text-align: center; padding: 0.3rem 0; border-bottom: 1px solid var(--card-border);">相机控制</div>
+            <button id="startCameraBtn" class="primary" onclick="startCamera()">
+                🎥 启动相机
+            </button>
+            <button id="stopCameraBtn" class="danger" onclick="stopCamera()" disabled>
+                ⏹️ 停止相机
+            </button>
+            
+            <!-- 主要操作 -->
+            <div style="margin-top: 0.5rem; font-size: 0.75rem; color: var(--text-secondary); text-align: center; padding: 0.3rem 0; border-top: 1px solid var(--card-border); border-bottom: 1px solid var(--card-border);">图像操作</div>
+            <button id="captureBtn" class="primary" onclick="captureImage()" disabled>
+                📷 拍摄图片
+            </button>
+            <button id="startRecognizeBtn" class="primary" onclick="startRecognition()" disabled>
+                🔍 AI识别
+            </button>
+            
+            <!-- 云端操作 -->
+            <div style="margin-top: 0.5rem; font-size: 0.75rem; color: var(--text-secondary); text-align: center; padding: 0.3rem 0; border-top: 1px solid var(--card-border); border-bottom: 1px solid var(--card-border);">云端上传</div>
+            <button id="uploadAllBtn" class="primary" onclick="uploadAllToCloud()" disabled>
+                ☁️ 上传结果并保存
+            </button>
+            
+            <!-- 清理操作 -->
+            <div style="margin-top: 0.5rem; font-size: 0.75rem; color: var(--text-secondary); text-align: center; padding: 0.3rem 0; border-top: 1px solid var(--card-border); border-bottom: 1px solid var(--card-border);">清理操作</div>
+            <button id="clearCaptureBtn" class="danger" onclick="clearCaptureImages()" disabled>
+                🗑️ 清除捕获图
+            </button>
+            <button id="clearResultBtn" class="danger" onclick="clearResultImage()" disabled>
+                🗑️ 清除结果图
+            </button>
+            
+            <!-- 返回 -->
+            <button onclick="select_fan()" style="margin-top: auto;">
+                ↩️ 返回主页
+            </button>
+        </aside>
+        
+        <main class="content">
+            <!-- 图像显示区域 -->
+            <section class="image-section">
+                <div class="image-box">
+                    <h3>📹 视频流</h3>
+                    <div class="image-container">
+                        <img id="cameraFeed" src="/recognition/stream" alt="相机实时画面" style="display: none;">
+                        <div id="videoPlaceholder" class="image-placeholder">
+                            <span>等待相机连接...</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="image-box">
+                    <h3>📸 捕获的图片</h3>
+                    <div class="image-container">
+                        <img id="capturedImage" src="" alt="捕获的图像" style="display: none;">
+                        <div id="capturedPlaceholder" class="image-placeholder">
+                            <span>等待拍摄图片...</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 结果图片预览区域 -->
+            <section class="results-section">
+                <div class="result-box" style="width: 100%;">
+                    <div class="result-header">
+                    <h3>🎯 结果图片预览</h3>
+                        <div class="result-controls">
+                            <button id="refreshResultsBtn" onclick="loadAllResults()">🔄 刷新</button>
+                            <span id="resultCount" style="font-size: 0.85rem; color: var(--text-secondary); padding: 0.3rem 0.8rem; background: rgba(0, 0, 0, 0.3); border-radius: 6px; border: 1px solid var(--card-border);">0 张结果</span>
+                        </div>
+                    </div>
+                    <div class="results-container">
+                        <button class="scroll-btn scroll-left" onclick="scrollResults('left')" id="scrollLeftBtn" style="display: none;">‹</button>
+                        <div class="results-grid" id="resultsGrid">
+                            <div class="image-placeholder" style="width: 100%;">
+                                <span>暂无结果图片</span>
+                        </div>
+                        </div>
+                        <button class="scroll-btn scroll-right" onclick="scrollResults('right')" id="scrollRightBtn" style="display: none;">›</button>
+                    </div>
+                    
+                    <!-- 瑕疵统计区域 -->
+                    <div class="defect-stats" id="defectStats">
+                        <div class="stats-header">
+                            <h4>📊 本轮检测统计</h4>
+                        </div>
+                        <div class="stats-content">
+                            <div class="most-common-defect">
+                                <span class="stats-label">最多瑕疵:</span>
+                                <span class="defect-name" id="mostCommonDefect">-</span>
+                                <span class="defect-count" id="mostCommonCount">0次</span>
+                            </div>
+                            <div class="defect-breakdown" id="defectBreakdown">
+                                <!-- 动态生成瑕疵统计 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+    
+        <!-- 图片放大模态框 -->
+    <div id="imageModal" class="image-modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeImageModal()">&times;</button>
+            <img id="modalImage" class="modal-image" src="" alt="放大图片">
+            <div class="modal-info" id="modalInfo"></div>
+        </div>
+    </div>
+    
+    <!-- 相机运行中警告模态框 -->
+    <div id="cameraWarningModal" class="image-modal" style="display: none;">
+        <div class="modal-content" style="max-width: 500px; text-align: center; padding: 2rem;">
+            <div style="font-size: 4rem; margin-bottom: 1rem;">⚠️</div>
+            <h2 style="color: var(--error-color); margin-bottom: 1rem;">相机仍在运行中</h2>
+            <p style="color: var(--text-primary); margin-bottom: 1.5rem; line-height: 1.6;">
+                检测到相机仍在运行，为确保资源正确释放，请先停止相机后再离开此页面。
+            </p>
+            <div style="display: flex; gap: 1rem; justify-content: center;">
+                <button onclick="closeWarningModal()" style="padding: 0.8rem 1.5rem; border-radius: 8px; border: 2px solid var(--card-border); background: var(--card-bg); cursor: pointer; font-weight: 500;">
+                    取消离开
+                </button>
+                <button onclick="goToStopCamera()" class="danger" style="padding: 0.8rem 1.5rem; border-radius: 8px; border: none; cursor: pointer; font-weight: 500;">
+                    去停止相机
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let currentImageName = null;
+        let isRecognizing = false;
+        
+        // 缓存管理相关变量
+        let cachedImages = [];
+        let selectedImages = new Set();
+        
+        // 相机运行状态标志
+        let isCameraRunning = false;
+        
+        // 页面加载时初始化
+        window.onload = function() {
+            checkCameraStatus();  // 检查相机状态但不自动启动
+            initScrollHints();
+            initKeyboardShortcuts();
+            initImageClickHandlers();
+            loadAllResults(); // 加载所有结果图片，会自动启用/禁用清除结果图按钮
+            
+            // 强制显示统计区域进行测试
+            setTimeout(() => {
+                const defectStats = document.getElementById('defectStats');
+                if (defectStats) {
+                    defectStats.style.display = 'block';
+                    console.log('强制显示统计区域');
+                }
+            }, 1000);
+        };
+        
+        // 页面卸载前检查相机状态
+        window.addEventListener('beforeunload', function(e) {
+            if (isCameraRunning) {
+                // 阻止页面关闭
+                e.preventDefault();
+                // Chrome需要返回值
+                e.returnValue = '⚠️ 相机仍在运行中！请先点击"停止相机"按钮关闭相机后再离开页面。';
+                return e.returnValue;
+            }
+        });
+        
+        // 页面卸载时的最终清理（如果用户强制离开）
+        window.addEventListener('unload', function() {
+            if (isCameraRunning) {
+                // 尝试异步停止相机（不保证成功，因为页面正在卸载）
+                navigator.sendBeacon('/recognition/stop_camera', JSON.stringify({}));
+            }
+        });
+        
+        // 启动相机
+        async function startCamera() {
+            try {
+                const startCameraBtn = document.getElementById('startCameraBtn');
+                const stopCameraBtn = document.getElementById('stopCameraBtn');
+                const statusText = document.getElementById('statusText');
+                
+                startCameraBtn.disabled = true;
+                startCameraBtn.textContent = '🎥 启动中...';
+                
+                const response = await fetch('/recognition/start_camera', { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.success) {
+                    statusText.textContent = '✅ ' + data.message;
+                    document.getElementById('statusBar').className = 'status-bar connected';
+                    showMessage('相机启动成功！', 'success');
+                    
+                    // 设置相机运行状态
+                    isCameraRunning = true;
+                    
+                    // 启用相关按钮
+                    startCameraBtn.disabled = true;
+                    stopCameraBtn.disabled = false;
+                    document.getElementById('captureBtn').disabled = false;
+                    
+                    // 显示视频流
+                    const cameraFeed = document.getElementById('cameraFeed');
+                    const videoPlaceholder = document.getElementById('videoPlaceholder');
+                    cameraFeed.style.display = 'block';
+                    videoPlaceholder.style.display = 'none';
+                    
+                    // 重新加载视频流
+                    cameraFeed.src = '/recognition/stream?t=' + new Date().getTime();
+                } else {
+                    statusText.textContent = '❌ 启动失败: ' + data.error;
+                    document.getElementById('statusBar').className = 'status-bar error';
+                    showMessage('相机启动失败: ' + data.error, 'error');
+                    startCameraBtn.disabled = false;
+                    isCameraRunning = false;
+                }
+                
+                startCameraBtn.textContent = '🎥 启动相机';
+            } catch (error) {
+                showMessage('启动相机异常: ' + error.message, 'error');
+                document.getElementById('startCameraBtn').disabled = false;
+                document.getElementById('startCameraBtn').textContent = '🎥 启动相机';
+                isCameraRunning = false; // 异常时确保状态为 false
+            }
+        }
+        
+        // 停止相机
+        async function stopCamera() {
+            if (!confirm('确定要停止相机吗？这将断开相机连接。')) {
+                return;
+            }
+            
+            try {
+                const startCameraBtn = document.getElementById('startCameraBtn');
+                const stopCameraBtn = document.getElementById('stopCameraBtn');
+                const statusText = document.getElementById('statusText');
+                
+                stopCameraBtn.disabled = true;
+                stopCameraBtn.textContent = '⏹️ 停止中...';
+                
+                const response = await fetch('/recognition/stop_camera', { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.success) {
+                    statusText.textContent = '⏹️ ' + data.message;
+                    document.getElementById('statusBar').className = 'status-bar';
+                    showMessage('相机已停止', 'info');
+                    
+                    // 清除相机运行状态
+                    isCameraRunning = false;
+                    
+                    // 禁用相关按钮
+                    startCameraBtn.disabled = false;
+                    stopCameraBtn.disabled = true;
+                    document.getElementById('captureBtn').disabled = true;
+                    document.getElementById('startRecognizeBtn').disabled = true;
+                    document.getElementById('uploadAllBtn').disabled = true;
+                    document.getElementById('clearCaptureBtn').disabled = true;
+                    
+                    // 隐藏视频流
+                    const cameraFeed = document.getElementById('cameraFeed');
+                    const videoPlaceholder = document.getElementById('videoPlaceholder');
+                    cameraFeed.style.display = 'none';
+                    videoPlaceholder.style.display = 'flex';
+                    videoPlaceholder.innerHTML = '<span>相机已停止</span>';
+                } else {
+                    statusText.textContent = '❌ 停止失败: ' + data.error;
+                    showMessage('相机停止失败: ' + data.error, 'error');
+                }
+                
+                stopCameraBtn.textContent = '⏹️ 停止相机';
+                stopCameraBtn.disabled = false;
+            } catch (error) {
+                showMessage('停止相机异常: ' + error.message, 'error');
+                document.getElementById('stopCameraBtn').disabled = false;
+                document.getElementById('stopCameraBtn').textContent = '⏹️ 停止相机';
+                // 注意：异常时不改变 isCameraRunning 状态，让用户重试
+            }
+        }
+        
+        // 检查相机状态（不自动启动）
+        async function checkCameraStatus() {
+            try {
+                const response = await fetch('/recognition/camera_status');
+                const data = await response.json();
+                const statusBar = document.getElementById('statusBar');
+                const statusText = document.getElementById('statusText');
+                const startCameraBtn = document.getElementById('startCameraBtn');
+                const stopCameraBtn = document.getElementById('stopCameraBtn');
+                const captureBtn = document.getElementById('captureBtn');
+                const cameraFeed = document.getElementById('cameraFeed');
+                const videoPlaceholder = document.getElementById('videoPlaceholder');
+                
+                if (data.success && data.status.running && data.status.connected) {
+                    // 相机正在运行且已连接
+                    statusText.textContent = `✅ 相机已运行: ${data.status.device_name}`;
+                    statusBar.className = 'status-bar connected';
+                    
+                    // 同步相机运行状态
+                    isCameraRunning = true;
+                    
+                    // 按钮状态
+                    startCameraBtn.disabled = true;
+                    stopCameraBtn.disabled = false;
+                    captureBtn.disabled = false;
+                    
+                    // 显示视频流
+                    cameraFeed.style.display = 'block';
+                    videoPlaceholder.style.display = 'none';
+                } else {
+                    // 相机未运行或未连接
+                    statusText.textContent = `⏹️ 相机未启动 - 点击"启动相机"开始`;
+                    statusBar.className = 'status-bar';
+                    
+                    // 同步相机运行状态
+                    isCameraRunning = false;
+                    
+                    // 按钮状态
+                    startCameraBtn.disabled = false;
+                    stopCameraBtn.disabled = true;
+                    captureBtn.disabled = true;
+                    
+                    // 禁用其他操作按钮
+                    document.getElementById('startRecognizeBtn').disabled = true;
+                    document.getElementById('uploadAllBtn').disabled = true;
+                    document.getElementById('clearCaptureBtn').disabled = true;
+                    
+                    // 隐藏视频流，显示占位符
+                    cameraFeed.style.display = 'none';
+                    videoPlaceholder.style.display = 'flex';
+                    videoPlaceholder.innerHTML = '<span>相机未启动，请点击"启动相机"</span>';
+                }
+            } catch (error) {
+                const statusText = document.getElementById('statusText');
+                statusText.textContent = `❌ 检查相机状态失败: ${error.message}`;
+                document.getElementById('statusBar').className = 'status-bar error';
+                
+                // 出错时重置状态
+                isCameraRunning = false;
+                
+                // 出错时允许尝试启动相机
+                document.getElementById('startCameraBtn').disabled = false;
+                document.getElementById('stopCameraBtn').disabled = true;
+                document.getElementById('captureBtn').disabled = true;
+                document.getElementById('startRecognizeBtn').disabled = true;
+                document.getElementById('uploadAllBtn').disabled = true;
+                document.getElementById('clearCaptureBtn').disabled = true;
+            }
+        }
+        
+        // 拍照功能
+        async function captureImage() {
+            try {
+                const response = await fetch('/recognition/capture', { method: 'POST' });
+                const data = await response.json();
+                const statusText = document.getElementById('statusText');
+                
+                if (data.success) {
+                    currentImageName = data.image_name; // 使用新的文件名
+                    const capturedImage = document.getElementById('capturedImage');
+                    const capturedPlaceholder = document.getElementById('capturedPlaceholder');
+                    
+                    console.log('[拍照] 拍照成功，返回数据:', data);
+                    console.log('[拍照] 图片路径:', data.image_path);
+                    console.log('[拍照] 图片名称:', data.image_name);
+                    console.log('[拍照] 图片尺寸:', data.image_size);
+                    
+                    // 使用后端返回的真实路径（重要！）
+                    capturedImage.src = `${data.image_path}?timestamp=${new Date().getTime()}`;
+                    capturedImage.style.display = 'block';
+                    capturedPlaceholder.style.display = 'none';
+                    
+                    // 启用相关按钮（但相机未运行时不启用）
+                    if (isCameraRunning) {
+                        document.getElementById('startRecognizeBtn').disabled = false;
+                        document.getElementById('uploadAllBtn').disabled = false;
+                        document.getElementById('clearCaptureBtn').disabled = false;
+                    }
+                    
+                    statusText.textContent = `📸 图像捕获成功！尺寸: ${data.image_size}`;
+                    document.getElementById('statusBar').className = 'status-bar connected';
+                    showMessage(`图像捕获成功！(${data.image_size})`, 'success');
+                } else {
+                    console.error('[拍照] 拍照失败:', data.error);
+                    statusText.textContent = '❌ 图像捕获失败：' + data.error;
+                    document.getElementById('statusBar').className = 'status-bar error';
+                    showMessage('图像捕获失败：' + data.error, 'error');
+                }
+            } catch (error) {
+                const statusText = document.getElementById('statusText');
+                statusText.textContent = '❌ 错误：' + error.message;
+                document.getElementById('statusBar').className = 'status-bar error';
+                showMessage('错误：' + error.message, 'error');
+            }
+        }
+        
+        
+        // 图像识别功能
+        async function recognizeImage() {
+            if (isRecognizing) return;
+            
+            if (!currentImageName) {
+                showMessage('请先拍照', 'error');
+                return;
+            }
+            
+            isRecognizing = true;
+            const recognizeBtn = document.getElementById('startRecognizeBtn');
+            const originalText = recognizeBtn.textContent;
+            recognizeBtn.textContent = '🔍 识别中...';
+            recognizeBtn.disabled = true;
+            
+            // 显示处理进度
+            showProcessingOverlay('AI模型正在分析图像...');
+            
+            try {
+                const response = await fetch('/api/recognize', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    console.log('[前端] 识别成功，返回数据:', data.data);
+                    
+                    // 显示识别结果
+                    displayRecognitionResults(data.data);
+                    
+                    showMessage('识别完成！结果已保存到本地缓存', 'success');
+                } else {
+                    console.error('[前端] 识别失败:', data.error);
+                    showMessage('识别失败：' + data.error, 'error');
+                }
+            } catch (error) {
+                showMessage('识别失败：' + error.message, 'error');
+            } finally {
+                isRecognizing = false;
+                recognizeBtn.textContent = originalText;
+                recognizeBtn.disabled = false;
+                hideProcessingOverlay();
+            }
+        }
+        
+        // 开始识别（新函数名）
+        async function startRecognition() {
+            await recognizeImage();
+        }
+        
+        // 一键上传结果图片到云端并保存到数据库
+        async function uploadAllToCloud() {
+            if (!currentImageName) {
+                showMessage('请先拍照并识别', 'error');
+                return;
+            }
+            
+            try {
+                console.log('[前端] 开始上传结果图片到云端...');
+                
+                const uploadAllBtn = document.getElementById('uploadAllBtn');
+                const originalText = uploadAllBtn.textContent;
+                uploadAllBtn.textContent = '☁️ 上传中...';
+                uploadAllBtn.disabled = true;
+                
+                // 只上传结果图片（包含识别框和类别信息），并写入数据库
+                const resultResponse = await fetch('/recognition/upload_result', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const resultData = await resultResponse.json();
+                console.log('[前端] 上传结果图响应:', resultData);
+                
+                if (resultData.success) {
+                    console.log('[前端] ✅ 结果图上传成功，已写入数据库');
+                    showMessage('✅ 结果图片已上传到云端并写入数据库！', 'success');
+                } else {
+                    console.error('[前端] ❌ 上传失败:', resultData.error);
+                    showMessage(`上传失败: ${resultData.error}`, 'error');
+                }
+                
+                uploadAllBtn.textContent = originalText;
+                uploadAllBtn.disabled = false;
+                
+            } catch (error) {
+                showMessage(`上传失败: ${error.message}`, 'error');
+                console.error('[前端] 上传异常:', error);
+                document.getElementById('uploadAllBtn').disabled = false;
+            }
+        }
+        
+        // 清除捕获图
+        async function clearCaptureImages() {
+            if (confirm('确定要清除捕获的图片吗？此操作将清空所有在线捕获图片缓存！')) {
+                try {
+                    // 调用后端API清空捕获图片缓存
+                    const response = await fetch('/api/online/clear_images', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        // 清空界面显示
+                        const capturedImage = document.getElementById('capturedImage');
+                        const capturedPlaceholder = document.getElementById('capturedPlaceholder');
+                        
+                        if (capturedImage) {
+                            capturedImage.style.display = 'none';
+                        }
+                        if (capturedPlaceholder) {
+                            capturedPlaceholder.style.display = 'flex';
+                            capturedPlaceholder.innerHTML = '<span>等待拍摄图片...</span>';
+                        }
+                        
+                        currentImageName = null;
+                        
+                        // 安全地禁用按钮（只禁用存在的按钮）
+                        const startRecognizeBtn = document.getElementById('startRecognizeBtn');
+                        const uploadAllBtn = document.getElementById('uploadAllBtn');
+                        const clearCaptureBtn = document.getElementById('clearCaptureBtn');
+                        
+                        if (startRecognizeBtn) startRecognizeBtn.disabled = true;
+                        if (uploadAllBtn) uploadAllBtn.disabled = true;
+                        if (clearCaptureBtn) clearCaptureBtn.disabled = true;
+                        
+                        showMessage('捕获图片缓存已清空', 'success');
+                    } else {
+                        showMessage(`清空捕获图片缓存失败: ${data.error}`, 'error');
+                    }
+                } catch (error) {
+                    showMessage(`清空捕获图片缓存失败: ${error.message}`, 'error');
+                }
+            }
+        }
+        
+        // 清除结果图
+        async function clearResultImage() {
+            if (confirm('确定要清除结果图片吗？此操作将清空所有在线结果图片缓存！')) {
+                try {
+                    // 调用后端API清空结果图片缓存
+                    const response = await fetch('/api/online/clear_results', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        // 安全地禁用按钮（只禁用存在的按钮）
+                        const clearResultBtn = document.getElementById('clearResultBtn');
+                        if (clearResultBtn) clearResultBtn.disabled = true;
+                        
+                        // 刷新结果图片网格
+                        loadAllResults();
+                        
+                        // 隐藏瑕疵统计
+                        const defectStats = document.getElementById('defectStats');
+                        if (defectStats) {
+                            defectStats.style.display = 'none';
+                        }
+                        
+                        showMessage('结果图片缓存已清空', 'success');
+                    } else {
+                        showMessage(`清空结果图片缓存失败: ${data.error}`, 'error');
+                    }
+                } catch (error) {
+                    showMessage(`清空结果图片缓存失败: ${error.message}`, 'error');
+                }
+            }
+        }
+        
+        // 显示处理进度
+        function showProcessingOverlay(message) {
+            const overlay = document.createElement('div');
+            overlay.className = 'processing-overlay';
+            overlay.id = 'processingOverlay';
+            overlay.innerHTML = `
+                <div class="processing-content">
+                    <div class="spinner"></div>
+                    <div>${message}</div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+        }
+        
+        // 隐藏处理进度
+        function hideProcessingOverlay() {
+            const overlay = document.getElementById('processingOverlay');
+            if (overlay) {
+                overlay.remove();
+            }
+        }
+        
+        // 加载所有结果图片
+        async function loadAllResults() {
+            try {
+                console.log('[前端] 开始加载结果图片...');
+                const response = await fetch('/api/online/results_status');
+                const data = await response.json();
+                
+                console.log('[前端] API响应:', data);
+                
+                if (data.success) {
+                    console.log('[前端] 结果数量:', data.data.results ? data.data.results.length : 0);
+                    if (data.data.results && data.data.results.length > 0) {
+                        console.log('[前端] 第一个结果:', data.data.results[0]);
+                    }
+                    displayResultsGrid(data.data.results);
+                } else {
+                    console.error('[前端] 加载结果图片失败:', data.error);
+                    showMessage('加载结果图片失败: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('[前端] 加载结果图片异常:', error);
+                showMessage('加载结果图片异常: ' + error.message, 'error');
+            }
+        }
+        
+        // 显示结果图片网格
+        function displayResultsGrid(results) {
+            console.log('[前端] 开始显示结果网格，结果数量:', results ? results.length : 0);
+            
+            const resultsGrid = document.getElementById('resultsGrid');
+            const resultCount = document.getElementById('resultCount');
+            const scrollLeftBtn = document.getElementById('scrollLeftBtn');
+            const scrollRightBtn = document.getElementById('scrollRightBtn');
+            
+            if (!results || results.length === 0) {
+                console.log('[前端] 无结果数据，显示空状态');
+                resultsGrid.innerHTML = '<div class="image-placeholder" style="width: 100%;"><span>暂无结果图片</span></div>';
+                resultCount.textContent = '0 张结果';
+                scrollLeftBtn.style.display = 'none';
+                scrollRightBtn.style.display = 'none';
+                
+                // 禁用清除结果图按钮
+                const clearResultBtn = document.getElementById('clearResultBtn');
+                if (clearResultBtn) clearResultBtn.disabled = true;
+                
+                // 更新瑕疵统计（显示空状态）
+                updateDefectStats([]);
+                return;
+            }
+            
+            console.log('[前端] 有结果数据，开始渲染...');
+            
+            // 按创建时间倒序排列（最新的在前）
+            results.sort((a, b) => {
+                const timeA = new Date(a.created_time || a.create_time || 0);
+                const timeB = new Date(b.created_time || b.create_time || 0);
+                return timeB - timeA;
+            });
+            
+            console.log('[前端] 排序后的结果:', results);
+            
+            resultsGrid.innerHTML = '';
+            results.forEach((result, index) => {
+                console.log(`[前端] 渲染结果 ${index + 1}:`, result);
+                
+            const resultItem = document.createElement('div');
+            resultItem.className = 'result-item';
+                resultItem.onclick = () => showResultImage(result);
+                
+                const img = document.createElement('img');
+                const imgSrc = `/api/online/result/${result.result_filename}?t=${new Date().getTime()}`;
+                console.log(`[前端] 图片源地址:`, imgSrc);
+                img.src = imgSrc;
+                img.alt = `识别结果 - ${result.result_class}`;
+                
+                img.onload = function() {
+                    console.log(`[前端] 图片加载成功:`, imgSrc);
+                };
+                
+                img.onerror = function() {
+                    console.error(`[前端] 图片加载失败:`, imgSrc);
+                    this.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDEyMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMjAiIGhlaWdodD0iMTIwIiBmaWxsPSIjMzMzIi8+Cjx0ZXh0IHg9IjYwIiB5PSI2MCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIiBmaWxsPSIjOTk5IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj7lm77niYfliKDpmaQ8L3RleHQ+Cjwvc3ZnPgo=';
+                };
+                
+                const info = document.createElement('div');
+                info.className = 'result-item-info';
+                
+                const displayTime = result.created_time || result.create_time || '时间未知';
+                console.log(`[前端] 显示时间:`, displayTime);
+                
+                info.innerHTML = `
+                    <div class="result-item-class">${result.result_class || '未知'}</div>
+                    <div class="result-item-confidence">置信度: ${((result.confidence || 0) * 100).toFixed(1)}%</div>
+                    <div class="result-item-time">${new Date(displayTime).toLocaleString('zh-CN')}</div>
+                `;
+                
+                resultItem.appendChild(img);
+                resultItem.appendChild(info);
+                resultsGrid.appendChild(resultItem);
+            });
+            
+            console.log('[前端] 结果渲染完成，共', results.length, '个');
+            
+            resultCount.textContent = `${results.length} 张结果`;
+            
+            // 启用清除结果图按钮
+            const clearResultBtn = document.getElementById('clearResultBtn');
+            if (clearResultBtn) clearResultBtn.disabled = false;
+            
+            // 显示滚动按钮
+            scrollLeftBtn.style.display = 'flex';
+            scrollRightBtn.style.display = 'flex';
+            
+            // 更新滚动按钮状态
+            updateScrollButtons();
+            
+            // 添加滚动事件监听
+            resultsGrid.addEventListener('scroll', updateScrollButtons);
+            
+            // 更新瑕疵统计
+            updateDefectStats(results);
+        }
+        
+        // 滚动结果图片
+        function scrollResults(direction) {
+            const resultsGrid = document.getElementById('resultsGrid');
+            const scrollAmount = 160; // 每次滚动的距离（与卡片宽度一致）
+            
+            if (direction === 'left') {
+                resultsGrid.scrollBy({
+                    left: -scrollAmount,
+                    behavior: 'smooth'
+                });
+            } else {
+                resultsGrid.scrollBy({
+                    left: scrollAmount,
+                    behavior: 'smooth'
+                });
+            }
+        }
+        
+        // 更新滚动按钮状态
+        function updateScrollButtons() {
+            const resultsGrid = document.getElementById('resultsGrid');
+            const scrollLeftBtn = document.getElementById('scrollLeftBtn');
+            const scrollRightBtn = document.getElementById('scrollRightBtn');
+            
+            if (!resultsGrid) return;
+            
+            const isAtStart = resultsGrid.scrollLeft <= 0;
+            const isAtEnd = resultsGrid.scrollLeft >= (resultsGrid.scrollWidth - resultsGrid.clientWidth);
+            
+            scrollLeftBtn.disabled = isAtStart;
+            scrollRightBtn.disabled = isAtEnd;
+        }
+        
+        // 更新瑕疵统计
+        function updateDefectStats(results) {
+            console.log('更新瑕疵统计，结果数量:', results ? results.length : 0);
+            
+            const defectStats = document.getElementById('defectStats');
+            const mostCommonDefect = document.getElementById('mostCommonDefect');
+            const mostCommonCount = document.getElementById('mostCommonCount');
+            const defectBreakdown = document.getElementById('defectBreakdown');
+            
+            if (!defectStats || !mostCommonDefect || !mostCommonCount || !defectBreakdown) {
+                console.error('统计元素未找到');
+                return;
+            }
+            
+            if (!results || results.length === 0) {
+                console.log('无结果数据，显示空统计');
+                mostCommonDefect.textContent = '暂无数据';
+                mostCommonCount.textContent = '0次';
+                defectBreakdown.innerHTML = '<div class="defect-item"><span class="defect-item-name">暂无检测数据</span></div>';
+                defectStats.style.display = 'block';
+                return;
+            }
+            
+            // 统计瑕疵类型
+            const defectCounts = {};
+            results.forEach(result => {
+                const defectType = result.result_class || 'No detection';
+                defectCounts[defectType] = (defectCounts[defectType] || 0) + 1;
+            });
+            
+            console.log('瑕疵统计:', defectCounts);
+            
+            // 找到最多的瑕疵类型
+            let maxCount = 0;
+            let mostCommon = '-';
+            Object.entries(defectCounts).forEach(([defect, count]) => {
+                if (count > maxCount) {
+                    maxCount = count;
+                    mostCommon = defect;
+                }
+            });
+            
+            console.log('最多瑕疵:', mostCommon, '次数:', maxCount);
+            
+            // 更新最多瑕疵显示
+            mostCommonDefect.textContent = mostCommon;
+            mostCommonCount.textContent = `${maxCount}次`;
+            
+            // 生成瑕疵统计详情
+            defectBreakdown.innerHTML = '';
+            const sortedDefects = Object.entries(defectCounts)
+                .sort(([,a], [,b]) => b - a)
+                .slice(0, 5); // 只显示前5个
+            
+            sortedDefects.forEach(([defect, count]) => {
+                const defectItem = document.createElement('div');
+                defectItem.className = 'defect-item';
+                
+                const totalCount = results.length;
+                const percentage = ((count / totalCount) * 100).toFixed(1);
+                const maxCountInList = Math.max(...Object.values(defectCounts));
+                const barWidth = Math.max(4, (count / maxCountInList) * 15);
+                
+                defectItem.innerHTML = `
+                    <span class="defect-item-name">${defect}</span>
+                    <span class="defect-item-count">${count}次 (${percentage}%)</span>
+                    <div class="defect-item-bar" style="width: ${barWidth} px;"></div>
+                `;
+                
+                defectBreakdown.appendChild(defectItem);
+            });
+            
+            // 显示统计区域
+            console.log('显示统计区域');
+            defectStats.style.display = 'block';
+        }
+        
+        // 显示单个结果图片
+        function showResultImage(result) {
+            const imageSrc = `/api/online/result/${result.result_filename}`;
+            const imageInfo = `识别结果 - ${result.result_class} (置信度: ${(result.confidence * 100).toFixed(1)}%)`;
+            showImageModal(imageSrc, imageInfo);
+        }
+        
+        // 显示识别结果
+        function displayRecognitionResults(data) {
+            console.log('[前端] 显示识别结果数据:', data);
+            console.log('[前端] 是否有结果图像:', data.has_result_image);
+            console.log('[前端] 结果图片路径:', data.result_image_path);
+            
+            // 显示识别结果信息
+            const confidenceClass = data.confidence >= 0.8 ? 'confidence-high' : 
+                                  data.confidence >= 0.6 ? 'confidence-medium' : 'confidence-low';
+            
+            // 更新状态栏显示识别结果
+            const statusText = document.getElementById('statusText');
+            if (statusText) {
+                statusText.innerHTML = `
+                    <span style="color: var(--success-color);">✅ 识别完成</span> | 
+                    <strong>类别:</strong> <span class="${confidenceClass}">${data.result_class}</span> | 
+                    <strong>置信度:</strong> <span class="${confidenceClass}">${(data.confidence * 100).toFixed(2)}%</span> | 
+                    <strong>时间:</strong> ${data.create_time}
+                `;
+                document.getElementById('statusBar').className = 'status-bar success';
+            }
+            
+            // 显示成功消息
+            showMessage(`识别完成！类别: ${data.result_class}, 置信度: ${(data.confidence * 100).toFixed(2)}%`, 'success');
+            
+            // 延迟500ms后刷新结果图片网格，确保后端完全保存
+            setTimeout(() => {
+                console.log('[前端] 延迟刷新结果列表...');
+            loadAllResults();
+            }, 500);
+            
+            // 启用上传按钮和清除结果图按钮（如果存在）
+            const uploadAllBtn = document.getElementById('uploadAllBtn');
+            const uploadResultBtn = document.getElementById('uploadResultBtn');
+            const clearResultBtn = document.getElementById('clearResultBtn');
+            if (uploadAllBtn) uploadAllBtn.disabled = false;
+            if (uploadResultBtn) uploadResultBtn.disabled = false;
+            if (clearResultBtn) clearResultBtn.disabled = false;
+        }
+        
+        // 清除结果
+        function clearResults() {
+            // 只重置图像显示
+            const capturedImage = document.getElementById('capturedImage');
+            const capturedPlaceholder = document.getElementById('capturedPlaceholder');
+            
+            if (capturedImage && capturedPlaceholder) {
+            capturedImage.style.display = 'none';
+            capturedPlaceholder.style.display = 'flex';
+            capturedPlaceholder.innerHTML = '<span>等待拍摄图片...</span>';
+            }
+            
+            // 重置按钮状态
+            const recognizeBtn = document.getElementById('recognizeBtn');
+            const clearBtn = document.getElementById('clearBtn');
+            const addToCacheBtn = document.getElementById('addToCacheBtn');
+            
+            if (recognizeBtn) recognizeBtn.disabled = true;
+            if (clearBtn) clearBtn.disabled = true;
+            if (addToCacheBtn) addToCacheBtn.disabled = true;
+            
+            // 重置全局变量
+            currentImageName = null;
+            
+            showMessage('图像已清除，可以开始第二次拍摄', 'info');
+        }
+        
+        // 返回主页
+        function select_fan() {
+            // 检查相机是否还在运行
+            if (isCameraRunning) {
+                // 显示警告模态框
+                showCameraWarningModal();
+                return; // 阻止跳转
+            }
+            
+            window.location.href = '/select_fan';
+        }
+        
+        // 显示相机运行警告模态框
+        function showCameraWarningModal() {
+            const modal = document.getElementById('cameraWarningModal');
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+        
+        // 关闭警告模态框
+        function closeWarningModal() {
+            const modal = document.getElementById('cameraWarningModal');
+            modal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+        
+        // 去停止相机（关闭模态框并高亮停止按钮）
+        function goToStopCamera() {
+            closeWarningModal();
+            
+            // 滚动到停止相机按钮并高亮
+            const stopCameraBtn = document.getElementById('stopCameraBtn');
+            stopCameraBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // 高亮动画
+            stopCameraBtn.style.animation = 'pulse 0.5s ease-in-out 5';
+            setTimeout(() => {
+                stopCameraBtn.style.animation = '';
+            }, 2500);
+            
+            // 显示提示消息
+            showMessage('请点击"停止相机"按钮关闭相机', 'info');
+        }
+        
+        // 显示消息提示
+        function showMessage(message, type = 'info') {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message message-${type}`;
+            messageDiv.textContent = message;
+            document.body.appendChild(messageDiv);
+            
+            // 3秒后自动移除
+            setTimeout(() => {
+                if (messageDiv.parentNode) {
+                    messageDiv.parentNode.removeChild(messageDiv);
+                }
+            }, 3000);
+        }
+        
+        // 初始化滚动提示
+        function initScrollHints() {
+            const resultContents = document.querySelectorAll('.result-content');
+            resultContents.forEach(content => {
+                content.addEventListener('scroll', function() {
+                    const scrollHint = this.querySelector('.scroll-hint');
+                    if (scrollHint && this.scrollTop > 10) {
+                        scrollHint.style.display = 'none';
+                    }
+                });
+            });
+        }
+        
+        // 初始化键盘快捷键
+        function initKeyboardShortcuts() {
+            document.addEventListener('keydown', function(event) {
+                // 防止在输入框中触发快捷键
+                if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+                    return;
+                }
+                
+                switch(event.key) {
+                    case ' ': // 空格键拍照
+                        event.preventDefault();
+                        if (!document.getElementById('captureBtn').disabled) {
+                            captureImage();
+                        }
+                        break;
+                    case 'Enter': // 回车键识别
+                        event.preventDefault();
+                        if (!document.getElementById('startRecognizeBtn').disabled) {
+                            startRecognition();
+                        }
+                        break;
+                    case 'Escape': // ESC键清除捕获图
+                        event.preventDefault();
+                        if (!document.getElementById('clearCaptureBtn').disabled) {
+                            clearCaptureImages();
+                        }
+                        break;
+                    case 'r': // Ctrl+R清除结果图
+                        if (event.ctrlKey) {
+                            event.preventDefault();
+                            if (!document.getElementById('clearResultBtn').disabled) {
+                                clearResultImage();
+                            }
+                        }
+                        break;
+                    case 'ArrowLeft': // 左箭头键向左滚动
+                        event.preventDefault();
+                        if (!document.getElementById('scrollLeftBtn').disabled) {
+                            scrollResults('left');
+                        }
+                        break;
+                    case 'ArrowRight': // 右箭头键向右滚动
+                        event.preventDefault();
+                        if (!document.getElementById('scrollRightBtn').disabled) {
+                            scrollResults('right');
+                        }
+                        break;
+                }
+            });
+        }
+        
+        // 定期检查相机状态
+        setInterval(checkCameraStatus, 5000);
+        
+        // 模拟视频流更新（当相机未连接时）
+        setInterval(() => {
+            const videoPlaceholder = document.getElementById('videoPlaceholder');
+            if (videoPlaceholder && videoPlaceholder.style.display !== 'none') {
+                const time = new Date().toLocaleTimeString();
+                videoPlaceholder.innerHTML = `<span>视频流 - 更新时间: ${time}</span>`;
+            }
+        }, 1000);
+        
+        // 添加系统信息显示
+        function addSystemInfo() {
+            const systemInfo = document.createElement('div');
+            systemInfo.style.cssText = `
+                position: fixed;
+                bottom: 15px;
+                left: 15px;
+                background: linear-gradient(135deg, rgba(0, 0, 0, 0.8), rgba(10, 132, 255, 0.1));
+                color: var(--text-secondary);
+                padding: 0.6rem 1rem;
+                border-radius: 8px;
+                font-size: 0.8rem;
+                z-index: 1000;
+                backdrop-filter: blur(10px);
+                border: 1px solid var(--card-border);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            `;
+            systemInfo.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="color: var(--success-color);">●</span>
+                    <span>系统运行中</span>
+                    <span style="margin-left: 0.8rem; color: var(--primary);" id="currentTime"></span>
+                </div>
+            `;
+            document.body.appendChild(systemInfo);
+            
+            // 更新时间
+            setInterval(() => {
+                const timeElement = document.getElementById('currentTime');
+                if (timeElement) {
+                    timeElement.textContent = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+                }
+            }, 1000);
+        }
+        
+        // 在页面加载时添加系统信息
+        window.addEventListener('load', addSystemInfo);
+        
+        
+        
+        // 初始化图片点击事件
+        function initImageClickHandlers() {
+            // 为所有图片添加点击事件
+            document.addEventListener('click', function(event) {
+                if (event.target.tagName === 'IMG' && event.target.closest('.image-container')) {
+                    const img = event.target;
+                    const container = img.closest('.image-box');
+                    const title = container.querySelector('h3').textContent;
+                    
+                    // 添加图片加载错误处理
+                    img.onerror = function() {
+                        console.error('图片加载失败:', img.src);
+                        // 如果图片加载失败，显示占位符
+                        img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDQwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjMzMzIi8+Cjx0ZXh0IHg9IjIwMCIgeT0iMTUwIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTgiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiPuWbvueJh+WKoOi9veWksei0pTwvdGV4dD4KPC9zdmc+Cg==';
+                    };
+                    
+                    // 根据不同的图片类型显示不同的信息
+                    let imageInfo = title;
+                    if (img.id === 'cameraFeed') {
+                        imageInfo = '📹 实时视频流 - 点击可放大查看';
+                    } else if (img.id === 'capturedImage') {
+                        imageInfo = `📸 捕获的图片 - ${currentImageName || '未知文件名'}`;
+                    } else if (img.id === 'resultImage') {
+                        imageInfo = '🔍 识别结果图片 - 点击可放大查看';
+                    }
+                    
+                    showImageModal(img.src, imageInfo);
+                }
+            });
+        }
+        
+        // 显示图片放大模态框
+        function showImageModal(imageSrc, title) {
+            const modal = document.getElementById('imageModal');
+            const modalImage = document.getElementById('modalImage');
+            const modalInfo = document.getElementById('modalInfo');
+            
+            // 添加图片加载错误处理
+            modalImage.onerror = function() {
+                console.error('模态框图片加载失败:', imageSrc);
+                modalImage.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDQwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjMzMzIi8+Cjx0ZXh0IHg9IjIwMCIgeT0iMTUwIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTgiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiPuWbvueJh+WKoOi9veWksei0pTwvdGV4dD4KPC9zdmc+Cg==';
+            };
+            
+            modalImage.src = imageSrc;
+            modalInfo.textContent = title;
+            modal.classList.add('show');
+            
+            // 防止背景滚动
+            document.body.style.overflow = 'hidden';
+        }
+        
+        // 关闭图片放大模态框
+        function closeImageModal() {
+            const modal = document.getElementById('imageModal');
+            modal.classList.remove('show');
+            
+            // 恢复背景滚动
+            document.body.style.overflow = 'auto';
+        }
+        
+        // 点击模态框背景关闭
+        document.getElementById('imageModal').addEventListener('click', function(event) {
+            if (event.target === this) {
+                closeImageModal();
+            }
+        });
+        
+        // ESC键关闭模态框
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                const modal = document.getElementById('imageModal');
+                if (modal.classList.contains('show')) {
+                    closeImageModal();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
