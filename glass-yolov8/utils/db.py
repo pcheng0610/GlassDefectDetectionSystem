@@ -1,4 +1,5 @@
 #数据库连接池
+import os
 import pymysql
 from pymysql import cursors
 from dbutils.pooled_db import PooledDB
@@ -9,17 +10,17 @@ import json
 POOL = PooledDB(
     creator=pymysql,
     maxconnections=10,
-    mincached=2,
+    mincached=0,
     maxcached=10,
     blocking=True,
     setsession=[],
     ping=0,
-    host='127.0.0.1',
-    port=3307,
-    user='root',
-    password='88888888',
+    host=os.getenv('MYSQL_HOST', '127.0.0.1'),
+    port=int(os.getenv('MYSQL_PORT', '3307')),
+    user=os.getenv('MYSQL_USER', 'root'),
+    password=os.getenv('MYSQL_PASSWORD', '88888888'),
     charset='utf8',
-    db='challenge',
+    db=os.getenv('MYSQL_DATABASE', 'challenge'),
 )
 
 def _generate_cache_key(sql, params):
@@ -189,6 +190,5 @@ class Transaction:
 
 # 创建全局事务对象
 connection = Transaction()
-
 
 
